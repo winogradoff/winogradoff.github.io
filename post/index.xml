@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Posts on Иван Виноградов</title>
+    <link>http://replace-this-with-your-domain.com/post/</link>
+    <description>Recent content in Posts on Иван Виноградов</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>ru-RU</language>
+    <copyright>Иван Виноградов</copyright>
+    <lastBuildDate>Thu, 18 Feb 2016 21:55:55 +0300</lastBuildDate>
+    <atom:link href="http://replace-this-with-your-domain.com/post/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Привет, GitHub!</title>
+      <link>http://replace-this-with-your-domain.com/2016/02/18/hello/</link>
+      <pubDate>Thu, 18 Feb 2016 21:55:55 +0300</pubDate>
+      
+      <guid>http://replace-this-with-your-domain.com/2016/02/18/hello/</guid>
+      <description>&lt;p&gt;Скоро тут что-то будет. Возможно.&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>
