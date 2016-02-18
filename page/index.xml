@@ -2,20 +2,20 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Pages on Иван Виноградов</title>
-    <link>http://replace-this-with-your-domain.com/page/</link>
+    <link>https://winogradoff.github.io/page/</link>
     <description>Recent content in Pages on Иван Виноградов</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>ru-RU</language>
     <copyright>Иван Виноградов</copyright>
     <lastBuildDate>Fri, 03 Apr 2015 02:13:50 +0000</lastBuildDate>
-    <atom:link href="http://replace-this-with-your-domain.com/page/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="https://winogradoff.github.io/page/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
       <title>Об авторе</title>
-      <link>http://replace-this-with-your-domain.com/page/about/</link>
+      <link>https://winogradoff.github.io/page/about/</link>
       <pubDate>Fri, 03 Apr 2015 02:13:50 +0000</pubDate>
       
-      <guid>http://replace-this-with-your-domain.com/page/about/</guid>
+      <guid>https://winogradoff.github.io/page/about/</guid>
       <description>
 
 &lt;h2 id=&#34;что-то-об-авторе:6083a88ee3411b0d17ce02d738f69d47&#34;&gt;Что-то об авторе&lt;/h2&gt;
