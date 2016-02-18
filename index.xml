@@ -1,17 +1,19 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-      <title> on My New Hugo Site </title>
+    <title>My New Hugo Site</title>
     <link>https://winogradoff.github.io/</link>
-    <language>en-us</language>
-    <author>Alexander Ivanov</author>
-    <updated>2016-02-18 21:04:55 &#43;0300 MSK</updated>
+    <description>Recent content on My New Hugo Site</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>ru-RU</language>
+    <lastBuildDate>Thu, 18 Feb 2016 21:04:55 +0300</lastBuildDate>
+    <atom:link href="https://winogradoff.github.io/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
       <title>Привет</title>
       <link>https://winogradoff.github.io/hello/</link>
-      <pubDate>Thu, 18 Feb 2016 21:04:55 MSK</pubDate>
-      <author>Alexander Ivanov</author>
+      <pubDate>Thu, 18 Feb 2016 21:04:55 +0300</pubDate>
+      
       <guid>https://winogradoff.github.io/hello/</guid>
       <description>&lt;p&gt;Скоро тут что-то будет. Возможно.&lt;/p&gt;
 </description>
