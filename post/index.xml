@@ -7,15 +7,15 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>ru-RU</language>
     <copyright>Иван Виноградов</copyright>
-    <lastBuildDate>Thu, 18 Feb 2016 21:55:55 +0300</lastBuildDate>
+    <lastBuildDate>Mon, 22 Feb 2016 00:00:00 +0000</lastBuildDate>
     <atom:link href="https://winogradoff.github.io/post/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
       <title>Привет, GitHub!</title>
-      <link>https://winogradoff.github.io/post/2016/02/18/hello/</link>
-      <pubDate>Thu, 18 Feb 2016 21:55:55 +0300</pubDate>
+      <link>https://winogradoff.github.io/post/2016/02/22/hello/</link>
+      <pubDate>Mon, 22 Feb 2016 00:00:00 +0000</pubDate>
       
-      <guid>https://winogradoff.github.io/post/2016/02/18/hello/</guid>
+      <guid>https://winogradoff.github.io/post/2016/02/22/hello/</guid>
       <description>
 
 &lt;p&gt;Решил я развернуть свой блог на новом движке &lt;a href=&#34;https://gohugo.io/&#34; title=&#34;Что за Hugo?&#34; target=&#34;_blank&#34;&gt;Hugo&lt;/a&gt;.&lt;/p&gt;
@@ -31,9 +31,10 @@
 &lt;ul&gt;
 &lt;li&gt;изменил структуру шаблонов&lt;/li&gt;
 &lt;li&gt;изменил формат вывода дат&lt;/li&gt;
-&lt;li&gt;добавил иконку ВКонтакте в шапку сайта (иконки — символы шрифта &lt;a href=&#34;https://fortawesome.github.io/Font-Awesome/&#34;&gt;Font Awesome&lt;/a&gt;)&lt;/li&gt;
+&lt;li&gt;добавил иконку ВКонтакте в шапку сайта (иконки — символы шрифта &lt;a href=&#34;https://fortawesome.github.io/Font-Awesome/&#34; title=&#34;&#34; target=&#34;_blank&#34;&gt;Font Awesome&lt;/a&gt;)&lt;/li&gt;
 &lt;li&gt;убрал подвал сайта (мне кажется он лишним)&lt;/li&gt;
-&lt;li&gt;временно отключил Disqus (систему комментариев) и Google Analytics.&lt;/li&gt;
+&lt;li&gt;отключил Disqus (систему комментариев) и Google Analytics.&lt;/li&gt;
+&lt;li&gt;подключил &lt;a href=&#34;https://vk.com/dev/Comments&#34; title=&#34;&#34; target=&#34;_blank&#34;&gt;виджет для комментариев ВКонтакте&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
 &lt;p&gt;Пока это всё. Планирую постить сюда какие-то находки и соображения по своим проектам.
