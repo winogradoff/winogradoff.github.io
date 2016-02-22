@@ -169,9 +169,7 @@ table {
   text-align: center; }
 
 .comments {
-      margin: 10px auto 0;
-      width: 600px;
-}
+  margin-top: 10px; }
 
 /* ============================================================ */
 /* Site Header */
