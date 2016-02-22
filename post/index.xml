@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Posts on Иван Виноградов</title>
+    <title>Post on Главная</title>
     <link>https://winogradoff.github.io/post/</link>
-    <description>Recent content in Posts on Иван Виноградов</description>
+    <description>Recent content in Post on Главная</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>ru-RU</language>
     <copyright>Иван Виноградов</copyright>
@@ -12,11 +12,32 @@
     
     <item>
       <title>Привет, GitHub!</title>
-      <link>https://winogradoff.github.io/2016/02/18/hello/</link>
+      <link>https://winogradoff.github.io/post/2016/02/18/hello/</link>
       <pubDate>Thu, 18 Feb 2016 21:55:55 +0300</pubDate>
       
-      <guid>https://winogradoff.github.io/2016/02/18/hello/</guid>
-      <description>&lt;p&gt;Скоро тут что-то будет. Возможно.&lt;/p&gt;
+      <guid>https://winogradoff.github.io/post/2016/02/18/hello/</guid>
+      <description>
+
+&lt;p&gt;Решил я развернуть свой блог на новом движке &lt;a href=&#34;https://gohugo.io/&#34; title=&#34;Что за Hugo?&#34; target=&#34;_blank&#34;&gt;Hugo&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Создатель Hugo обещает, что мы создадим сайт &lt;a href=&#34;https://gohugo.io/overview/quickstart/&#34;&gt;за 2 минуты&lt;/a&gt;, что являтся большим плюсом для новичков.&lt;/p&gt;
+
+&lt;p&gt;Надо сказать, что многие &lt;a href=&#34;http://themes.gohugo.io/&#34;&gt;темы&lt;/a&gt; используют какую-то странную структуру html-шаблонов, которая часто несогласована с &lt;a href=&#34;https://gohugo.io/templates/overview/&#34;&gt;документацией&lt;/a&gt;, но это довольно просто исправляется.&lt;/p&gt;
+
+&lt;p&gt;Для себя я выбрал тему &lt;a href=&#34;https://github.com/jbub/ghostwriter&#34;&gt;Ghostwriter&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h3 id=&#34;что-я-менял-в-теме:8a07c3dae13f18d0c06cf5f9e482b173&#34;&gt;Что я менял в теме:&lt;/h3&gt;
+
+&lt;ul&gt;
+&lt;li&gt;изменил структуру шаблонов&lt;/li&gt;
+&lt;li&gt;изменил формат вывода дат&lt;/li&gt;
+&lt;li&gt;добавил иконку ВКонтакте в шапку сайта (иконки — символы шрифта &lt;a href=&#34;https://fortawesome.github.io/Font-Awesome/&#34;&gt;Font Awesome&lt;/a&gt;)&lt;/li&gt;
+&lt;li&gt;убрал подвал сайта (мне кажется он лишним)&lt;/li&gt;
+&lt;li&gt;временно отключил Disqus (систему комментариев) и Google Analytics.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Пока это всё. Планирую постить сюда какие-то находки и соображения по своим проектам.
+В ближайших планах заполнить страницу &lt;a href=&#34;https://winogradoff.github.io/page/about/&#34;&gt;Об авторе&lt;/a&gt;.&lt;/p&gt;
 </description>
     </item>
     
