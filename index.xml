@@ -7,8 +7,111 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>ru-RU</language>
     <copyright>Иван Виноградов</copyright>
-    <lastBuildDate>Mon, 22 Feb 2016 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Thu, 03 Mar 2016 21:36:33 +0300</lastBuildDate>
     <atom:link href="https://winogradoff.github.io/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Метод Гаусса-Жордана для нахождения обратной матрицы</title>
+      <link>https://winogradoff.github.io/post/2016/03/03/gauss-jordan-inverse-matrix/</link>
+      <pubDate>Thu, 03 Mar 2016 21:36:33 +0300</pubDate>
+      
+      <guid>https://winogradoff.github.io/post/2016/03/03/gauss-jordan-inverse-matrix/</guid>
+      <description>&lt;p&gt;Программирование графических процессоров на Nvidia CUDA. Начало.&lt;/p&gt;
+
+&lt;p&gt;Первая лабораторная работа — нахождение обратной матрицы.&lt;/p&gt;
+
+&lt;p&gt;Пока вспомним алгоритм на Python:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;from copy import deepcopy
+import sys
+
+
+def words():
+    &amp;quot;&amp;quot;&amp;quot;
+    read the words
+    &amp;quot;&amp;quot;&amp;quot;
+    for line in sys.stdin:
+        for word in line.split():
+            yield word
+
+
+def new_empty(n):
+    &amp;quot;&amp;quot;&amp;quot;
+    create a new empty matrix
+    &amp;quot;&amp;quot;&amp;quot;
+    return [x[:] for x in [[0.0] * n] * n]
+
+
+def pivotize(mat_a):
+    &amp;quot;&amp;quot;&amp;quot;
+    move the largest items in the column on the diagonal
+    &amp;quot;&amp;quot;&amp;quot;
+    mat_a = deepcopy(mat_a)
+    size = len(mat_a)
+    for j in range(size):
+        row = max(range(j, size), key=lambda i: abs(mat_a[i][j]))
+        if j != row:
+            mat_a[j], mat_a[row] = mat_a[row], mat_a[j]
+    return mat_a
+
+
+def invert(mat_a):
+    mat_a = deepcopy(mat_a)
+    n = len(mat_a)
+
+    for i in range(n):
+        mat_a[i] += [int(i == j) for j in range(n)]
+
+    mat_a = pivotize(mat_a)
+
+    # move forward
+    for i in range(n):
+        first = mat_a[i][i]
+        # divide the line items on the leading element
+        for j in range(i, n * 2):
+            mat_a[i][j] /= first
+        # zero values below the leading element
+        for x in range(i + 1, n):
+            first = mat_a[x][i]
+            for y in range(i, n * 2):
+                mat_a[x][y] -= first * mat_a[i][y]
+
+    # move back
+    for i in reversed(range(n)):
+        # zero values above the leading element
+        for x in reversed(range(0, i)):
+            first = mat_a[x][i]
+            for y in reversed(range(n * 2)):
+                mat_a[x][y] -= first * mat_a[i][y]
+
+    # cut the left part
+    for i in range(n):
+        mat_a[i] = mat_a[i][n:]
+
+    return mat_a
+
+
+def main():
+    n = int(input())
+    mat_a = new_empty(n)
+    w = words()
+    for i in range(n):
+        for j in range(n):
+            mat_a[i][j] = float(next(w))
+
+    result = invert(mat_a)
+    for i in range(n):
+        for j in range(n):
+            print(&#39;{:15.10f}&#39;.format(round(result[i][j], 10)), end=&#39; &#39;)
+        print()
+
+
+if __name__ == &#39;__main__&#39;:
+    main()
+
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
     
     <item>
       <title>Привет, GitHub!</title>
