@@ -11,16 +11,24 @@
     <atom:link href="https://winogradoff.github.io/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
-      <title>Метод Гаусса-Жордана для нахождения обратной матрицы</title>
+      <title>Обращение матрицы на Nvidia CUDA</title>
       <link>https://winogradoff.github.io/post/2016/03/03/gauss-jordan-inverse-matrix/</link>
       <pubDate>Thu, 03 Mar 2016 21:36:33 +0300</pubDate>
       
       <guid>https://winogradoff.github.io/post/2016/03/03/gauss-jordan-inverse-matrix/</guid>
-      <description>&lt;p&gt;Программирование графических процессоров на Nvidia CUDA. Начало.&lt;/p&gt;
+      <description>
 
-&lt;p&gt;Первая лабораторная работа — нахождение обратной матрицы.&lt;/p&gt;
+&lt;p&gt;Программирование графических процессоров на Nvidia CUDA. Начало.&lt;/p&gt;
 
-&lt;p&gt;Пока вспомним алгоритм на Python:&lt;/p&gt;
+&lt;p&gt;Первая лабораторная работа — нахождение обратной матрицы.
+Для этого используется самый обычный &lt;a href=&#34;https://ru.wikipedia.org/wiki/%D0%9C%D0%B5%D1%82%D0%BE%D0%B4_%D0%93%D0%B0%D1%83%D1%81%D1%81%D0%B0_%E2%80%94_%D0%96%D0%BE%D1%80%D0%B4%D0%B0%D0%BD%D0%B0&#34;&gt;метод Гаусса-Жордана&lt;/a&gt;.
+Он заключается в составлении расширенной матрицы. Справа к нашей матрице следует дописать единичную матрицу.&lt;/p&gt;
+
+&lt;p&gt;Путем элементарных преобразований левая часть матрицы приводится к верхней треугольной.
+Аналогичные преобразования проделываются в обратном ходе метода, обнуляя элементы над ведущим.
+В итоге в правой части дополненной матрицы мы получим обратную матрицу.&lt;/p&gt;
+
+&lt;h3 id=&#34;вспомним-алгоритм-на-python:f386d8bd3c74b1c6b09568d7b0bbcc75&#34;&gt;Вспомним алгоритм на Python:&lt;/h3&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;from copy import deepcopy
 import sys
@@ -28,7 +36,7 @@ import sys
 
 def words():
     &amp;quot;&amp;quot;&amp;quot;
-    read the words
+    Чтение по словам
     &amp;quot;&amp;quot;&amp;quot;
     for line in sys.stdin:
         for word in line.split():
@@ -37,54 +45,56 @@ def words():
 
 def new_empty(n):
     &amp;quot;&amp;quot;&amp;quot;
-    create a new empty matrix
+    Создание новой матрицы
     &amp;quot;&amp;quot;&amp;quot;
     return [x[:] for x in [[0.0] * n] * n]
 
 
-def pivotize(mat_a):
+def pivotize(mat_a, x):
     &amp;quot;&amp;quot;&amp;quot;
-    move the largest items in the column on the diagonal
+    Путем обмена строк расположить наибольшие элементы на диагонали
     &amp;quot;&amp;quot;&amp;quot;
     mat_a = deepcopy(mat_a)
     size = len(mat_a)
-    for j in range(size):
-        row = max(range(j, size), key=lambda i: abs(mat_a[i][j]))
-        if j != row:
-            mat_a[j], mat_a[row] = mat_a[row], mat_a[j]
+    row = max(range(x, size), key=lambda i: abs(mat_a[i][x]))
+    if x != row:
+        mat_a[x], mat_a[row] = mat_a[row], mat_a[x]
     return mat_a
 
 
 def invert(mat_a):
+    &amp;quot;&amp;quot;&amp;quot;
+    Обращение матрицы методом Гаусса-Жордана
+    &amp;quot;&amp;quot;&amp;quot;
     mat_a = deepcopy(mat_a)
     n = len(mat_a)
 
+    # Дополнить матрицу справа единичной матрицей
     for i in range(n):
         mat_a[i] += [int(i == j) for j in range(n)]
 
-    mat_a = pivotize(mat_a)
+    # Прямой ход
+    for x in range(n):
+        mat_a = pivotize(mat_a, x)
+        for i in range(x + 1, n):
+            coefficient = mat_a[i][x] / mat_a[x][x]
+            for j in range(x, n * 2):
+                mat_a[i][j] -= coefficient * mat_a[x][j]
 
-    # move forward
+    # Обратный ход
+    for x in reversed(range(n)):
+        for i in reversed(range(x)):
+            coefficient = mat_a[i][x] / mat_a[x][x]
+            for j in reversed(range(n * 2)):
+                mat_a[i][j] -= coefficient * mat_a[x][j]
+
+    # Разделить строки на ведущие элементы
     for i in range(n):
-        first = mat_a[i][i]
-        # divide the line items on the leading element
-        for j in range(i, n * 2):
-            mat_a[i][j] /= first
-        # zero values below the leading element
-        for x in range(i + 1, n):
-            first = mat_a[x][i]
-            for y in range(i, n * 2):
-                mat_a[x][y] -= first * mat_a[i][y]
+        denominator = mat_a[i][i]
+        for j in range(n * 2):
+            mat_a[i][j] /= denominator
 
-    # move back
-    for i in reversed(range(n)):
-        # zero values above the leading element
-        for x in reversed(range(0, i)):
-            first = mat_a[x][i]
-            for y in reversed(range(n * 2)):
-                mat_a[x][y] -= first * mat_a[i][y]
-
-    # cut the left part
+    # Оставить только правую часть матрицы
     for i in range(n):
         mat_a[i] = mat_a[i][n:]
 
@@ -92,9 +102,9 @@ def invert(mat_a):
 
 
 def main():
-    n = int(input())
-    mat_a = new_empty(n)
     w = words()
+    n = int(next(w))
+    mat_a = new_empty(n)
     for i in range(n):
         for j in range(n):
             mat_a[i][j] = float(next(w))
@@ -102,12 +112,420 @@ def main():
     result = invert(mat_a)
     for i in range(n):
         for j in range(n):
-            print(&#39;{:15.10f}&#39;.format(round(result[i][j], 10)), end=&#39; &#39;)
+            print(&#39;{:.6e}&#39;.format(round(result[i][j], 10)), end=&#39; &#39;)
         print()
 
 
 if __name__ == &#39;__main__&#39;:
     main()
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h3 id=&#34;перепишем-тоже-самое-с-небольшими-изменениями-на-c:f386d8bd3c74b1c6b09568d7b0bbcc75&#34;&gt;Перепишем тоже самое (с небольшими изменениями) на C++:&lt;/h3&gt;
+
+&lt;ul&gt;
+&lt;li&gt;функции не возвращают новые матрицы, а делают изменения в переденных,&lt;/li&gt;
+&lt;li&gt;повторяющиеся части разнесены по отдельным функциям.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-cpp&#34;&gt;#include &amp;lt;iostream&amp;gt;
+#include &amp;lt;iomanip&amp;gt;  
+#include &amp;lt;cmath&amp;gt;
+
+using namespace std;
+
+
+void print(double *matrix, int n)
+{
+    cout &amp;lt;&amp;lt; scientific;
+    for(int i = 0; i &amp;lt; n; i++)
+    {
+        for(int j = 0; j &amp;lt; n; j++)
+        {
+            cout &amp;lt;&amp;lt; matrix[i * n + j] &amp;lt;&amp;lt; &amp;quot;\t&amp;quot;;
+        }
+        cout &amp;lt;&amp;lt; endl;
+    }
+}
+
+// Обмен строк в матрице
+void swap_lines(double *matrix, double *identity, int n, int i, int j)
+{    
+    double temp;
+    for(int k = 0; k &amp;lt; n; k++)
+    {
+        temp = matrix[i * n + k];
+        matrix[i * n + k] = matrix[j * n + k];
+        matrix[j * n + k] = temp;
+
+        temp = identity[i * n + k];
+        identity[i * n + k] = identity[j * n + k];
+        identity[j * n + k] = temp;
+    }
+}
+
+// Поставить на место row строку с наибольшим ведущим коэффициентом
+void pivotize(double *matrix, double *identity, int n, int row)
+{    
+    int max_index = row;
+    double max_value = fabs(matrix[row * n + row]);
+    double current_value;
+    for(int i = row + 1; i &amp;lt; n; i++)
+    {
+        current_value = fabs(matrix[i * n + row]);
+        if(current_value &amp;gt; max_value)
+        {
+            max_index = i;
+            max_value = current_value;
+        }
+    }
+
+    if(row != max_index)
+    {
+        swap_lines(matrix, identity, n, row, max_index);
+    }
+}
+
+// Разделить строку матрицы на значение
+void devide(double *matrix, int n, int i, double denominator)
+{
+    for(int j = 0; j &amp;lt; n; j++)
+    {
+        matrix[i * n + j] /= denominator;
+    }
+}
+
+// Обнуление элементов под ведущим элементом в строке x
+void subtract_below(double *matrix, double *identity, int n, int x)
+{
+    double coeff;
+    for(int i = x + 1; i &amp;lt; n; i++)
+    {
+        coeff = matrix[i * n + x] / matrix[x * n + x];
+        for(int j = x; j &amp;lt; n; j++)
+        {
+            matrix[i * n + j] -= coeff * matrix[x * n + j];
+        }
+        for(int j = 0; j &amp;lt; n; j++)
+        {
+            identity[i * n + j] -= coeff * identity[x * n + j];
+        }
+    }
+}
+
+// Обнуление элементов над ведущим элементом в строке x
+void subtract_above(double *matrix, double *identity, int n, int x)
+{
+    double coeff;
+    for(int i = x - 1; i &amp;gt;= 0; i--)
+    {
+        coeff = matrix[i * n + x] / matrix[x * n + x];
+        for(int j = x; j &amp;gt;= 0; j--)
+        {
+            matrix[i * n + j] -= coeff * matrix[x * n + j];
+        }
+        for(int j = 0; j &amp;lt; n; j++)
+        {
+            identity[i * n + j] -= coeff * identity[x * n + j];
+        }
+    }
+}
+
+// Обращение матрицы методом Гаусса-Жордана
+void inverse(double *matrix, double *identity, int n)
+{        
+    // Прямой ход
+    for(int i = 0; i &amp;lt; n - 1; i++)
+    {
+        // Обмен строк
+        pivotize(matrix, identity, n, i);
+
+        // Обнулить элементы ниже ведущего
+        subtract_below(matrix, identity, n, i);
+    }
+
+    // Обратный ход
+    for(int i = n - 1; i &amp;gt; 0; i--)
+    {
+        // Обнулить элементы выше ведущего
+        subtract_above(matrix, identity, n, i);
+    }
+
+    // Разделить строки на ведущие элементы
+    for(int i = 0; i &amp;lt; n; i++)
+    {
+        devide(identity, n, i, matrix[i * n + i]);
+        devide(matrix, n, i, matrix[i * n + i]);
+    }
+}
+
+int main()
+{
+    int n;
+    cin &amp;gt;&amp;gt; n;
+
+    double *matrix = new double[n * n];
+    double *identity = new double[n * n];
+
+    for(int i = 0; i &amp;lt; n; i++)
+    {
+        for(int j = 0; j &amp;lt; n; j++)
+        {
+            cin &amp;gt;&amp;gt; matrix[i * n + j];
+        }
+    }
+
+    for(int i = 0; i &amp;lt; n; i++)
+    {
+        for(int j = 0; j &amp;lt; n; j++)
+        {
+            identity[i * n + j] = i == j ? 1.0 : 0.0;
+        }
+    }
+
+    inverse(matrix, identity, n);
+    print(identity, n);
+
+    delete[] matrix;
+    delete[] identity;
+
+    return 0;
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h3 id=&#34;что-нужно-для-написания-версии-под-cuda:f386d8bd3c74b1c6b09568d7b0bbcc75&#34;&gt;Что нужно для написания версии под CUDA?&lt;/h3&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Выделить независимые подпрограммы, которые можно распараллелить:
+
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;pivotize&lt;/strong&gt; — поиск масимального ведущего элемента и обмен строк,&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;subtract_below&lt;/strong&gt; — обнуление элементов ниже ведущего,&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;subtract_above&lt;/strong&gt; — обнуление элементов выше ведущего (обратный ход),&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;devide&lt;/strong&gt; — деление строк на их ведущие элементы.&lt;/li&gt;
+&lt;/ol&gt;&lt;/li&gt;
+&lt;li&gt;Привести подпрограммы к выполнению однотипных действий:
+
+&lt;ol&gt;
+&lt;li&gt;функция &lt;strong&gt;pivotize&lt;/strong&gt; разделена на две:
+
+&lt;ul&gt;
+&lt;li&gt;&lt;em&gt;max_in_column&lt;/em&gt; — поиск максимального ведущего элемента (индекс max_element_index сохраняется в глобальную память GPU)&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;swap_lines&lt;/em&gt; — обмен строк (обмен текущей строки со строкой с индексом max_element_index)&lt;/li&gt;
+&lt;/ul&gt;&lt;/li&gt;
+&lt;li&gt;функция &lt;strong&gt;subtract_below&lt;/strong&gt; разделена на:
+
+&lt;ul&gt;
+&lt;li&gt;&lt;em&gt;subtract_below&lt;/em&gt; — вычитание текущей строки из нижележащих строк правее ведущего столбца с целью обнулить элементы ниже ведущего&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;nullify_below&lt;/em&gt; — обнуление элементов в столбце под ведущим&lt;/li&gt;
+&lt;/ul&gt;&lt;/li&gt;
+&lt;li&gt;функция &lt;strong&gt;subtract_above&lt;/strong&gt; разделена на:
+
+&lt;ul&gt;
+&lt;li&gt;&lt;em&gt;subtract_above&lt;/em&gt; — вычитание текущей строки из вышележащих строк левее ведущего столбца с целью обнулить элементы выше ведущего&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;nullify_above&lt;/em&gt; — обнуление элементов в столбце над ведущим&lt;/li&gt;
+&lt;/ul&gt;&lt;/li&gt;
+&lt;li&gt;функция &lt;strong&gt;devide&lt;/strong&gt; разделена на:
+
+&lt;ul&gt;
+&lt;li&gt;&lt;em&gt;devide_identity&lt;/em&gt; — разделить строки правой матрицы на диагональные элементы левой матрицы&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;devide_matrix&lt;/em&gt; — заменить все диагональные элементы в левой матрице на единицы&lt;/li&gt;
+&lt;/ul&gt;&lt;/li&gt;
+&lt;/ol&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&#34;итоговый-код-на-cuda:f386d8bd3c74b1c6b09568d7b0bbcc75&#34;&gt;Итоговый код на CUDA:&lt;/h3&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-cpp&#34;&gt;#include &amp;lt;iostream&amp;gt;
+#include &amp;lt;fstream&amp;gt;
+#include &amp;lt;iomanip&amp;gt;
+#include &amp;lt;string&amp;gt;
+#include &amp;lt;cmath&amp;gt;
+#include &amp;lt;algorithm&amp;gt;
+
+#define uint unsigned int
+
+#define DEBUG false
+#define DEBUG_MATRIX true
+#define DEBUG_TIMER true
+
+using namespace std;
+
+
+void print(int *matrix, int w, int h)
+{
+    for(int i = 0; i &amp;lt; h; i++)
+    {
+        for(int j = 0; j &amp;lt; w; j++)
+        {
+            int c = matrix[i * w + j];
+            cout &amp;lt;&amp;lt; setw(4) &amp;lt;&amp;lt; (int) (c &amp;amp; 0xff) &amp;lt;&amp;lt; &amp;quot;,&amp;quot;;
+            cout &amp;lt;&amp;lt; setw(4) &amp;lt;&amp;lt; (int) ((c &amp;gt;&amp;gt; 8) &amp;amp; 0xff) &amp;lt;&amp;lt; &amp;quot;,&amp;quot;;
+            cout &amp;lt;&amp;lt; setw(4) &amp;lt;&amp;lt; (int) ((c &amp;gt;&amp;gt; 16) &amp;amp; 0xff) &amp;lt;&amp;lt; &amp;quot;,&amp;quot;;
+            cout &amp;lt;&amp;lt; setw(4) &amp;lt;&amp;lt; (int) ((c &amp;gt;&amp;gt; 24) &amp;amp; 0xff) &amp;lt;&amp;lt; &amp;quot;\t&amp;quot;;
+        }
+        cout &amp;lt;&amp;lt; endl;
+    }
+}
+
+__device__ int get_element(int *dev_input, int w, int h, int i, int j)
+{
+    i = max(0, min(i, h - 1));
+    j = max(0, min(j, w - 1));
+    return dev_input[i * w + j];
+}
+
+__device__ int pack(int4 rgba)
+{
+    return (rgba.w &amp;lt;&amp;lt; 24) | (rgba.z &amp;lt;&amp;lt; 16) | (rgba.y &amp;lt;&amp;lt; 8) | rgba.x;
+}
+
+__device__ int4 unpack(int c)
+{
+    int4 rgba;
+    rgba.x = c &amp;amp; 0xff;
+    rgba.y = (c&amp;gt;&amp;gt;8) &amp;amp; 0xff;
+    rgba.z = (c&amp;gt;&amp;gt;16) &amp;amp; 0xff;
+    rgba.w = (c&amp;gt;&amp;gt;24) &amp;amp; 0xff;
+    return rgba;
+}
+
+__device__ double intensity(int4 rgba)
+{
+    return 0.299 * rgba.x + 0.587 * rgba.y + 0.114 * rgba.z;
+}
+
+__global__ void roberts_cross_kernel(int *dev_input, int *dev_output, int w, int h)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int idy = blockIdx.y * blockDim.y + threadIdx.y;
+    int offsetx = gridDim.x * blockDim.x;
+    int offsety = gridDim.y * blockDim.y;
+
+    for(int i = idx; i &amp;lt; h; i += offsetx)
+    {
+        for(int j = idy; j &amp;lt; w; j += offsety)
+        {
+            // Метод Робертса (wiki):
+            // tmp1 = absolute_value(input_image(x, y) - input_image(x+1,y+1))
+            // tmp2 = absolute_value(input_image(x+1,y) - input_image(x, y+1))
+            // output_image(x, y) = Sqrt(tmp1^2 + tmp2^2)
+
+            double m  = intensity(unpack(get_element(dev_input, w, h, i, j)));
+            double br = intensity(unpack(get_element(dev_input, w, h, i + 1, j + 1)));
+            double r  = intensity(unpack(get_element(dev_input, w, h, i, j + 1)));
+            double b  = intensity(unpack(get_element(dev_input, w, h, i + 1, j)));
+
+            double tmp1 = m - br;
+            double tmp2 = r - b;
+            int gradient = (int) sqrt(tmp1 * tmp1 + tmp2 * tmp2);
+
+            // Нормировка
+            if(gradient &amp;gt; 255)
+            {
+                gradient = 255;
+            }
+
+            // Записываем интенсивность в RGB
+            dev_output[i * w + j] = pack(make_int4(gradient, gradient, gradient, 0));
+        }
+    }
+}
+
+void roberts_cross_gpu(int *input, int *output, int w, int h)
+{
+    dim3 THREADS(32, 32);
+    dim3 BLOCKS(
+        min(1024.0, ceil(h / float(THREADS.x))),
+        min(1024.0, ceil(w / float(THREADS.y)))
+    );
+
+    int *dev_input;
+    int *dev_output;
+    cudaMalloc(&amp;amp;dev_input, sizeof(int) * w * h);
+    cudaMalloc(&amp;amp;dev_output, sizeof(int) * w * h);
+    cudaMemcpy(dev_input, input, sizeof(int) * w * h, cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_output, output, sizeof(int) * w * h, cudaMemcpyHostToDevice);
+
+    cudaEvent_t start, stop;
+
+    if(DEBUG &amp;amp;&amp;amp; DEBUG_TIMER)
+    {
+        cudaEventCreate(&amp;amp;start);
+        cudaEventCreate(&amp;amp;stop);
+        cudaEventRecord(start, 0);
+    }
+
+    roberts_cross_kernel&amp;lt;&amp;lt;&amp;lt;BLOCKS, THREADS&amp;gt;&amp;gt;&amp;gt;(dev_input, dev_output, w, h);
+
+    if(DEBUG &amp;amp;&amp;amp; DEBUG_TIMER)
+    {
+        cudaGetLastError();
+        cudaEventRecord(stop, 0);
+        cudaEventSynchronize(stop);
+        float t;
+        cudaEventElapsedTime(&amp;amp;t, start, stop);
+        cout &amp;lt;&amp;lt; &amp;quot;time: &amp;quot; &amp;lt;&amp;lt; t &amp;lt;&amp;lt; endl &amp;lt;&amp;lt; endl;
+        cudaEventDestroy(start);
+        cudaEventDestroy(stop);
+    }
+
+    cudaMemcpy(output, dev_output, sizeof(int) * w * h, cudaMemcpyDeviceToHost);
+    cudaFree(dev_input);
+    cudaFree(dev_output);
+}
+
+int main()
+{
+    string path_in;
+    cin &amp;gt;&amp;gt; path_in;
+
+    string path_out;
+    cin &amp;gt;&amp;gt; path_out;
+
+    int w, h;
+    ifstream input_stream;
+    input_stream.open(path_in.c_str(), ios::binary);
+
+    // Размеры изображения
+    input_stream.read((char *) &amp;amp;w, sizeof(int));
+    input_stream.read((char *) &amp;amp;h, sizeof(int));
+
+    // Входное и выходное изображения
+    int *input = new int[w * h];
+    int *output = new int[w * h];
+
+    input_stream.read((char *) input, sizeof(int) * w * h);
+    input_stream.close();
+
+    if(DEBUG &amp;amp;&amp;amp; DEBUG_MATRIX)
+    {
+        cout &amp;lt;&amp;lt; &amp;quot;Before:&amp;quot; &amp;lt;&amp;lt; endl;
+        print(input, w, h);
+        cout &amp;lt;&amp;lt; endl;
+    }
+
+    roberts_cross_gpu(input, output, w, h);
+
+    if(DEBUG &amp;amp;&amp;amp; DEBUG_MATRIX)
+    {
+        cout &amp;lt;&amp;lt; &amp;quot;After:&amp;quot; &amp;lt;&amp;lt; endl;
+        print(output, w, h);
+        cout &amp;lt;&amp;lt; endl;
+    }
+
+    // Запись в файл
+    ofstream output_stream;
+    output_stream.open(path_out.c_str(), ios::binary);
+    output_stream.write((char *) &amp;amp;w, sizeof(int));
+    output_stream.write((char *) &amp;amp;h, sizeof(int));
+    output_stream.write((char *) output, sizeof(int) * w * h);
+    output_stream.close();
+
+    delete[] input;
+    delete[] output;
+
+    return 0;
+}
 
 &lt;/code&gt;&lt;/pre&gt;
 </description>
