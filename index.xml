@@ -336,127 +336,245 @@ int main()
 &lt;h3 id=&#34;итоговый-код-на-cuda:f386d8bd3c74b1c6b09568d7b0bbcc75&#34;&gt;Итоговый код на CUDA:&lt;/h3&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-cpp&#34;&gt;#include &amp;lt;iostream&amp;gt;
-#include &amp;lt;fstream&amp;gt;
-#include &amp;lt;iomanip&amp;gt;
-#include &amp;lt;string&amp;gt;
 #include &amp;lt;cmath&amp;gt;
-#include &amp;lt;algorithm&amp;gt;
-
-#define uint unsigned int
 
 #define DEBUG false
-#define DEBUG_MATRIX true
+#define DEBUG_MATRIX false
 #define DEBUG_TIMER true
 
 using namespace std;
 
+// Индекс строки с максимальным элементом из find_max_element_in_columnt()
+__device__ int max_element_index;
 
-void print(int *matrix, int w, int h)
+void print(double *matrix, int n)
 {
-    for(int i = 0; i &amp;lt; h; i++)
+    cout &amp;lt;&amp;lt; scientific;
+    for(int i = 0; i &amp;lt; n; i++)
     {
-        for(int j = 0; j &amp;lt; w; j++)
+        for(int j = 0; j &amp;lt; n; j++)
         {
-            int c = matrix[i * w + j];
-            cout &amp;lt;&amp;lt; setw(4) &amp;lt;&amp;lt; (int) (c &amp;amp; 0xff) &amp;lt;&amp;lt; &amp;quot;,&amp;quot;;
-            cout &amp;lt;&amp;lt; setw(4) &amp;lt;&amp;lt; (int) ((c &amp;gt;&amp;gt; 8) &amp;amp; 0xff) &amp;lt;&amp;lt; &amp;quot;,&amp;quot;;
-            cout &amp;lt;&amp;lt; setw(4) &amp;lt;&amp;lt; (int) ((c &amp;gt;&amp;gt; 16) &amp;amp; 0xff) &amp;lt;&amp;lt; &amp;quot;,&amp;quot;;
-            cout &amp;lt;&amp;lt; setw(4) &amp;lt;&amp;lt; (int) ((c &amp;gt;&amp;gt; 24) &amp;amp; 0xff) &amp;lt;&amp;lt; &amp;quot;\t&amp;quot;;
+            cout &amp;lt;&amp;lt; matrix[i * n + j] &amp;lt;&amp;lt; &amp;quot;\t&amp;quot;;  
         }
         cout &amp;lt;&amp;lt; endl;
     }
 }
 
-__device__ int get_element(int *dev_input, int w, int h, int i, int j)
+void print_both(double *matrix, double *identity, int n)
 {
-    i = max(0, min(i, h - 1));
-    j = max(0, min(j, w - 1));
-    return dev_input[i * w + j];
+    cout &amp;lt;&amp;lt; scientific;
+    for(int i = 0; i &amp;lt; n; i++)
+    {
+        for(int j = 0; j &amp;lt; 2 * n; j++)
+        {
+            if(j &amp;lt; n)
+            {
+                cout &amp;lt;&amp;lt; matrix[i * n + j] &amp;lt;&amp;lt; &amp;quot;\t&amp;quot;;
+            }
+            else
+            {
+                cout &amp;lt;&amp;lt; identity[i * n + j - n] &amp;lt;&amp;lt; &amp;quot;\t&amp;quot;;
+            }
+            
+        }
+        cout &amp;lt;&amp;lt; endl;
+    }
 }
 
-__device__ int pack(int4 rgba)
+// Обмен строк
+__global__ void swap_lines(double *dev_matrix, double *dev_identity, int n, int row)
 {
-    return (rgba.w &amp;lt;&amp;lt; 24) | (rgba.z &amp;lt;&amp;lt; 16) | (rgba.y &amp;lt;&amp;lt; 8) | rgba.x;
+    if(row == max_element_index)
+    {
+        return;
+    }
+
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int offset = gridDim.x * blockDim.x;
+    
+    double temp;
+    for(; idx &amp;lt; n; idx += offset)
+    {
+        temp = dev_matrix[row * n + idx];
+        dev_matrix[row * n + idx] = dev_matrix[max_element_index * n + idx];
+        dev_matrix[max_element_index * n + idx] = temp;
+
+        temp = dev_identity[row * n + idx];
+        dev_identity[row * n + idx] = dev_identity[max_element_index * n + idx];
+        dev_identity[max_element_index * n + idx] = temp;
+    }
 }
 
-__device__ int4 unpack(int c)
+// Сохранение индекса строки с максимальным элементом в max_element_index на GPU
+__global__ void max_in_column(double *dev_matrix, int n, int row)
 {
-    int4 rgba;
-    rgba.x = c &amp;amp; 0xff;
-    rgba.y = (c&amp;gt;&amp;gt;8) &amp;amp; 0xff;
-    rgba.z = (c&amp;gt;&amp;gt;16) &amp;amp; 0xff;
-    rgba.w = (c&amp;gt;&amp;gt;24) &amp;amp; 0xff;
-    return rgba;
+    int max_index = row;
+    double max_value = fabs(dev_matrix[row * n + row]);
+    double current_value;
+
+    for(int i = row + 1; i &amp;lt; n; i++)
+    {
+        current_value = fabs(dev_matrix[i * n + row]);
+        if(current_value &amp;gt; max_value)
+        {
+            max_index = i;
+            max_value = current_value;
+        }
+    }
+
+    max_element_index = max_index;
 }
 
-__device__ double intensity(int4 rgba)
-{
-    return 0.299 * rgba.x + 0.587 * rgba.y + 0.114 * rgba.z;
-}
-
-__global__ void roberts_cross_kernel(int *dev_input, int *dev_output, int w, int h)
+__global__ void devide_identity(double *dev_matrix, double *dev_identity, int n)
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int idy = blockIdx.y * blockDim.y + threadIdx.y;
     int offsetx = gridDim.x * blockDim.x;
     int offsety = gridDim.y * blockDim.y;
-
-    for(int i = idx; i &amp;lt; h; i += offsetx)
-    {
-        for(int j = idy; j &amp;lt; w; j += offsety)
+    
+    for(int i = idx; i &amp;lt; n; i += offsetx)
+    {        
+        for(int j = idy; j &amp;lt; n; j += offsety)
         {
-            // Метод Робертса (wiki):
-            // tmp1 = absolute_value(input_image(x, y) - input_image(x+1,y+1))
-            // tmp2 = absolute_value(input_image(x+1,y) - input_image(x, y+1))
-            // output_image(x, y) = Sqrt(tmp1^2 + tmp2^2)
-
-            double m  = intensity(unpack(get_element(dev_input, w, h, i, j)));
-            double br = intensity(unpack(get_element(dev_input, w, h, i + 1, j + 1)));
-            double r  = intensity(unpack(get_element(dev_input, w, h, i, j + 1)));
-            double b  = intensity(unpack(get_element(dev_input, w, h, i + 1, j)));
-
-            double tmp1 = m - br;
-            double tmp2 = r - b;
-            int gradient = (int) sqrt(tmp1 * tmp1 + tmp2 * tmp2);
-
-            // Нормировка
-            if(gradient &amp;gt; 255)
-            {
-                gradient = 255;
-            }
-
-            // Записываем интенсивность в RGB
-            dev_output[i * w + j] = pack(make_int4(gradient, gradient, gradient, 0));
+            dev_identity[i * n + j] /= dev_matrix[i * n + i];
         }
     }
 }
 
-void roberts_cross_gpu(int *input, int *output, int w, int h)
+__global__ void devide_matrix(double *dev_matrix, int n)
 {
-    dim3 THREADS(32, 32);
-    dim3 BLOCKS(
-        min(1024.0, ceil(h / float(THREADS.x))),
-        min(1024.0, ceil(w / float(THREADS.y)))
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int offsetx = gridDim.x * blockDim.x;
+    for(int i = idx; i &amp;lt; n; i += offsetx)
+    {
+        dev_matrix[i * n + i] = 1.0;
+    }
+}
+
+// Обнуление элементов под ведущим элементом в строке x
+__global__ void subtract_below(double *dev_matrix, double *dev_identity, int n, int x)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int idy = blockIdx.y * blockDim.y + threadIdx.y;
+    int offsetx = gridDim.x * blockDim.x;
+    int offsety = gridDim.y * blockDim.y;
+    
+    double coeff;
+    for(int i = x + 1 + idx; i &amp;lt; n; i += offsetx)
+    {
+        coeff = dev_matrix[i * n + x] / dev_matrix[x * n + x];
+        for(int j = x + 1 + idy; j &amp;lt; n; j += offsety)
+        {
+            dev_matrix[i * n + j] -= coeff * dev_matrix[x * n + j];
+        }
+        for(int j = idy; j &amp;lt; n; j += offsety)
+        {
+            dev_identity[i * n + j] -= coeff * dev_identity[x * n + j];
+        }
+    }
+}
+
+__global__ void nullify_below(double *dev_matrix, int n, int x)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int offsetx = gridDim.x * blockDim.x;
+    for(int i = x + 1 + idx; i &amp;lt; n; i += offsetx)
+    {
+        dev_matrix[i * n + x] = 0.0;
+    }
+}
+
+// Обнуление элементов над ведущим элементом в строке x
+__global__ void subtract_above(double *dev_matrix, double *dev_identity, int n, int x)
+{
+    int idx = threadIdx.x + blockIdx.x * blockDim.x;
+    int idy = threadIdx.y + blockIdx.y * blockDim.y;
+    int offsetx = gridDim.x * blockDim.x;
+    int offsety = gridDim.y * blockDim.y;
+    
+    double coeff;
+    for(int i = x - 1 - idx; i &amp;gt;= 0; i -= offsetx)
+    {
+        coeff = dev_matrix[i * n + x] / dev_matrix[x * n + x];
+        for(int j = x - 1 - idy; j &amp;gt;= 0; j -= offsety)
+        {
+            dev_matrix[i * n + j] -= coeff * dev_matrix[x * n + j];
+        }
+        for(int j = idy; j &amp;lt; n; j += offsety)
+        {
+            dev_identity[i * n + j] -= coeff * dev_identity[x * n + j];
+        }
+    }
+}
+
+__global__ void nullify_above(double *dev_matrix, int n, int x)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int offsetx = gridDim.x * blockDim.x;
+    for(int i = x - idx - 1; i &amp;gt;= 0; i -= offsetx)
+    {
+        dev_matrix[i * n + x] = 0.0;
+    }
+}
+
+// Обращение матрицы методом Гаусса-Жордана
+void inverse_gpu(double *matrix, double *identity, int n)
+{
+    // Максимум 1048576 блоков и 1024 потока в блоке
+
+    dim3 THREADS_1D(1024);
+    dim3 BLOCKS_1D( ceil(n/float(THREADS_1D.x)) );
+
+    dim3 THREADS_2D(1, 1024);
+    dim3 BLOCKS_2D(
+        min(1024.0, ceil(n/float(THREADS_2D.x))),
+        min(1024.0, ceil(n/float(THREADS_2D.y)))
+    );
+    
+    dim3 THREADS_2D_EQUAL(32, 32);
+    dim3 BLOCKS_2D_EQUAL(
+        min(1024.0, ceil(n/float(THREADS_2D_EQUAL.x))),
+        min(1024.0, ceil(n/float(THREADS_2D_EQUAL.y)))
     );
 
-    int *dev_input;
-    int *dev_output;
-    cudaMalloc(&amp;amp;dev_input, sizeof(int) * w * h);
-    cudaMalloc(&amp;amp;dev_output, sizeof(int) * w * h);
-    cudaMemcpy(dev_input, input, sizeof(int) * w * h, cudaMemcpyHostToDevice);
-    cudaMemcpy(dev_output, output, sizeof(int) * w * h, cudaMemcpyHostToDevice);
-
+    double *dev_matrix;
+    double *dev_identity;
+    cudaMalloc(&amp;amp;dev_matrix, sizeof(double) * n * n);
+    cudaMalloc(&amp;amp;dev_identity, sizeof(double) * n * n);
+    cudaMemcpy(dev_matrix, matrix, sizeof(double) * n * n, cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_identity, identity, sizeof(double) * n * n, cudaMemcpyHostToDevice);
+    
     cudaEvent_t start, stop;
-
+    
     if(DEBUG &amp;amp;&amp;amp; DEBUG_TIMER)
     {
         cudaEventCreate(&amp;amp;start);
         cudaEventCreate(&amp;amp;stop);
         cudaEventRecord(start, 0);
     }
+    
+    // Прямой ход
+    for(int i = 0; i &amp;lt; n; i++)
+    {
+        // Обменять строку со строкой с наибольшим ведущим элементом и обнулить элементы под ним
+        max_in_column&amp;lt;&amp;lt;&amp;lt;1, 1&amp;gt;&amp;gt;&amp;gt;(dev_matrix, n, i);
+        swap_lines&amp;lt;&amp;lt;&amp;lt;BLOCKS_1D, THREADS_1D&amp;gt;&amp;gt;&amp;gt;(dev_matrix, dev_identity, n, i);
+        subtract_below&amp;lt;&amp;lt;&amp;lt;BLOCKS_2D, THREADS_2D&amp;gt;&amp;gt;&amp;gt;(dev_matrix, dev_identity, n, i);
+        nullify_below&amp;lt;&amp;lt;&amp;lt;BLOCKS_1D, THREADS_1D&amp;gt;&amp;gt;&amp;gt;(dev_matrix, n, i);
+    }
 
-    roberts_cross_kernel&amp;lt;&amp;lt;&amp;lt;BLOCKS, THREADS&amp;gt;&amp;gt;&amp;gt;(dev_input, dev_output, w, h);
-
+    // Обратный ход
+    for(int i = n - 1; i &amp;gt;= 0; i--)
+    {
+        // Обнулить элементы выше ведущего
+        subtract_above&amp;lt;&amp;lt;&amp;lt;BLOCKS_2D, THREADS_2D&amp;gt;&amp;gt;&amp;gt;(dev_matrix, dev_identity, n, i);
+        nullify_above&amp;lt;&amp;lt;&amp;lt;BLOCKS_1D, THREADS_1D&amp;gt;&amp;gt;&amp;gt;(dev_matrix, n, i);
+    }
+    
+    // Разделить строки на их ведущие элементы
+    devide_identity&amp;lt;&amp;lt;&amp;lt;BLOCKS_2D_EQUAL, THREADS_2D_EQUAL&amp;gt;&amp;gt;&amp;gt;(dev_matrix, dev_identity, n);
+    devide_matrix&amp;lt;&amp;lt;&amp;lt;BLOCKS_1D, THREADS_1D&amp;gt;&amp;gt;&amp;gt;(dev_matrix, n);
+    
     if(DEBUG &amp;amp;&amp;amp; DEBUG_TIMER)
     {
         cudaGetLastError();
@@ -468,65 +586,65 @@ void roberts_cross_gpu(int *input, int *output, int w, int h)
         cudaEventDestroy(start);
         cudaEventDestroy(stop);
     }
-
-    cudaMemcpy(output, dev_output, sizeof(int) * w * h, cudaMemcpyDeviceToHost);
-    cudaFree(dev_input);
-    cudaFree(dev_output);
+    
+    cudaMemcpy(matrix, dev_matrix, sizeof(double) * n * n, cudaMemcpyDeviceToHost);
+    cudaMemcpy(identity, dev_identity, sizeof(double) * n * n, cudaMemcpyDeviceToHost);
+    cudaFree(dev_matrix);
+    cudaFree(dev_identity);
 }
 
 int main()
 {
-    string path_in;
-    cin &amp;gt;&amp;gt; path_in;
+    int n;
+    cin &amp;gt;&amp;gt; n;
 
-    string path_out;
-    cin &amp;gt;&amp;gt; path_out;
+    double *matrix = new double[n * n];
+    double *identity = new double[n * n];
 
-    int w, h;
-    ifstream input_stream;
-    input_stream.open(path_in.c_str(), ios::binary);
+    for(int i = 0; i &amp;lt; n; i++)
+    {
+        for(int j = 0; j &amp;lt; n; j++)
+        {
+            cin &amp;gt;&amp;gt; matrix[i * n + j];
+        }
+    }
 
-    // Размеры изображения
-    input_stream.read((char *) &amp;amp;w, sizeof(int));
-    input_stream.read((char *) &amp;amp;h, sizeof(int));
-
-    // Входное и выходное изображения
-    int *input = new int[w * h];
-    int *output = new int[w * h];
-
-    input_stream.read((char *) input, sizeof(int) * w * h);
-    input_stream.close();
-
+    for(int i = 0; i &amp;lt; n; i++)
+    {
+        for(int j = 0; j &amp;lt; n; j++)
+        {
+            identity[i * n + j] = i == j ? 1.0 : 0.0;
+        }
+    }
+    
     if(DEBUG &amp;amp;&amp;amp; DEBUG_MATRIX)
     {
         cout &amp;lt;&amp;lt; &amp;quot;Before:&amp;quot; &amp;lt;&amp;lt; endl;
-        print(input, w, h);
+        print_both(matrix, identity, n);
         cout &amp;lt;&amp;lt; endl;
     }
+    
 
-    roberts_cross_gpu(input, output, w, h);
+    inverse_gpu(matrix, identity, n);
 
     if(DEBUG &amp;amp;&amp;amp; DEBUG_MATRIX)
     {
         cout &amp;lt;&amp;lt; &amp;quot;After:&amp;quot; &amp;lt;&amp;lt; endl;
-        print(output, w, h);
+        print_both(matrix, identity, n);
         cout &amp;lt;&amp;lt; endl;
     }
+    
+    if(!DEBUG)
+    {
+        // Вывести обратную матрицу
+        print(identity, n);
+    }
 
-    // Запись в файл
-    ofstream output_stream;
-    output_stream.open(path_out.c_str(), ios::binary);
-    output_stream.write((char *) &amp;amp;w, sizeof(int));
-    output_stream.write((char *) &amp;amp;h, sizeof(int));
-    output_stream.write((char *) output, sizeof(int) * w * h);
-    output_stream.close();
-
-    delete[] input;
-    delete[] output;
+    delete[] matrix;
+    delete[] identity;
 
     return 0;
 }
-
 &lt;/code&gt;&lt;/pre&gt;
 </description>
     </item>
