@@ -7,28 +7,235 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>ru-RU</language>
     <copyright>Иван Виноградов</copyright>
-    <lastBuildDate>Thu, 03 Mar 2016 21:36:33 +0300</lastBuildDate>
+    <lastBuildDate>Fri, 11 Mar 2016 06:09:32 +0300</lastBuildDate>
     <atom:link href="https://winogradoff.github.io/post/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
-      <title>Обращение матрицы на Nvidia CUDA</title>
-      <link>https://winogradoff.github.io/post/2016/03/03/gauss-jordan-inverse-matrix/</link>
+      <title>Nvidia CUDA. Выделение границ с помощью перекрёстного оператора Робертса</title>
+      <link>https://winogradoff.github.io/post/2016/03/11/cuda-roberts-cross-operator/</link>
+      <pubDate>Fri, 11 Mar 2016 06:09:32 +0300</pubDate>
+      
+      <guid>https://winogradoff.github.io/post/2016/03/11/cuda-roberts-cross-operator/</guid>
+      <description>&lt;p&gt;&lt;em&gt;Из &lt;a href=&#34;https://ru.wikipedia.org/wiki/%D0%9F%D0%B5%D1%80%D0%B5%D0%BA%D1%80%D1%91%D1%81%D1%82%D0%BD%D1%8B%D0%B9_%D0%BE%D0%BF%D0%B5%D1%80%D0%B0%D1%82%D0%BE%D1%80_%D0%A0%D0%BE%D0%B1%D0%B5%D1%80%D1%82%D1%81%D0%B0&#34;&gt;статьи на Википедии&lt;/a&gt;:&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;В компьютерном зрении перекрёстный оператор Робертса — один из ранних алгоритмов выделения границ, который вычисляет сумму квадратов разниц между диагонально смежными пикселами. Это может быть выполнено сверткой изображения с двумя ядрами:&lt;/p&gt;
+
+&lt;p style=&#34;text-align: center&#34;&gt;
+&lt;img src=&#34;https://winogradoff.github.io/img/cuda-roberts-cross-operator/wiki_1.png&#34; title=&#34;/img/cuda-roberts-cross-operator/wiki_1.png&#34; /&gt;
+&lt;/p&gt;
+
+&lt;p&gt;Иными словами, каждый пиксель получаемого изображения вычисляется по правилу:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;a = input_image(x, y) - input_image(x + 1, y + 1)
+b = input_image(x + 1,y) - input_image(x, y + 1)
+output_image(x, y) = Sqrt(a^2 + b^2)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Что это всё значит разберём чуть позже, а пока давайте взглянем на работу фильтра:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://winogradoff.github.io/img/cuda-roberts-cross-operator/example_1_before.jpg&#34; alt=&#34;Оригинальное изображение&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://winogradoff.github.io/img/cuda-roberts-cross-operator/example_1_after.jpg&#34; alt=&#34;После фильтрации с помощью перекрёстного оператора Робертса&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://winogradoff.github.io/img/cuda-roberts-cross-operator/example_2_before.jpg&#34; alt=&#34;Оригинальное изображение&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://winogradoff.github.io/img/cuda-roberts-cross-operator/example_2_after.jpg&#34; alt=&#34;После фильтрации с помощью перекрёстного оператора Робертса&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://winogradoff.github.io/img/cuda-roberts-cross-operator/example_3_before.jpg&#34; alt=&#34;Оригинальное изображение&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://winogradoff.github.io/img/cuda-roberts-cross-operator/example_3_after.jpg&#34; alt=&#34;После фильтрации с помощью перекрёстного оператора Робертса&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Код алгоритма на CUDA:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-cpp&#34;&gt;
+#include &amp;lt;iostream&amp;gt;
+#include &amp;lt;fstream&amp;gt;
+#include &amp;lt;iomanip&amp;gt;
+#include &amp;lt;string&amp;gt;
+#include &amp;lt;cmath&amp;gt;
+#include &amp;lt;algorithm&amp;gt;
+
+#define uint unsigned int
+
+#define DEBUG true
+#define DEBUG_MATRIX false
+#define DEBUG_TIMER true
+
+using namespace std;
+
+void print(int *matrix, int w, int h) {
+  for (int i = 0; i &amp;lt; h; i++) {
+    for (int j = 0; j &amp;lt; w; j++) {
+      int c = matrix[i * w + j];
+      cout &amp;lt;&amp;lt; setw(4) &amp;lt;&amp;lt; (int)(c &amp;amp; 0xff) &amp;lt;&amp;lt; &amp;quot;,&amp;quot;;
+      cout &amp;lt;&amp;lt; setw(4) &amp;lt;&amp;lt; (int)((c &amp;gt;&amp;gt; 8) &amp;amp; 0xff) &amp;lt;&amp;lt; &amp;quot;,&amp;quot;;
+      cout &amp;lt;&amp;lt; setw(4) &amp;lt;&amp;lt; (int)((c &amp;gt;&amp;gt; 16) &amp;amp; 0xff) &amp;lt;&amp;lt; &amp;quot;,&amp;quot;;
+      cout &amp;lt;&amp;lt; setw(4) &amp;lt;&amp;lt; (int)((c &amp;gt;&amp;gt; 24) &amp;amp; 0xff) &amp;lt;&amp;lt; &amp;quot;\t&amp;quot;;
+    }
+    cout &amp;lt;&amp;lt; endl;
+  }
+}
+
+__device__ int get_element(int *input, int w, int h, int i, int j) {
+  i = max(0, min(i, h - 1));
+  j = max(0, min(j, w - 1));
+  return input[i * w + j];
+}
+
+__device__ int pack(int4 rgba) {
+  return (rgba.w &amp;lt;&amp;lt; 24) | (rgba.z &amp;lt;&amp;lt; 16) | (rgba.y &amp;lt;&amp;lt; 8) | rgba.x;
+}
+
+__device__ int4 unpack(int c) {
+  int4 rgba;
+  rgba.x = c &amp;amp; 0xff;
+  rgba.y = (c &amp;gt;&amp;gt; 8) &amp;amp; 0xff;
+  rgba.z = (c &amp;gt;&amp;gt; 16) &amp;amp; 0xff;
+  rgba.w = (c &amp;gt;&amp;gt; 24) &amp;amp; 0xff;
+  return rgba;
+}
+
+__device__ double intensity(int4 rgba) {
+  return 0.299 * rgba.x + 0.587 * rgba.y + 0.114 * rgba.z;
+}
+
+__global__ void roberts_cross_kernel(int *input, int *output, int w, int h) {
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  int idy = blockIdx.y * blockDim.y + threadIdx.y;
+  int offsetx = gridDim.x * blockDim.x;
+  int offsety = gridDim.y * blockDim.y;
+
+  for (int i = idx; i &amp;lt; h; i += offsetx) {
+    for (int j = idy; j &amp;lt; w; j += offsety) {
+      double m = intensity(unpack(get_element(input, w, h, i, j)));
+      double br = intensity(unpack(get_element(input, w, h, i + 1, j + 1)));
+      double r = intensity(unpack(get_element(input, w, h, i, j + 1)));
+      double b = intensity(unpack(get_element(input, w, h, i + 1, j)));
+
+      double tmp1 = m - br;
+      double tmp2 = r - b;
+
+      // Нормировка
+      int result = min(255, (int)sqrt(tmp1 * tmp1 + tmp2 * tmp2));
+
+      // Записываем интенсивность в RGB
+      output[i * w + j] = pack(make_int4(result, result, result, 0));
+    }
+  }
+}
+
+void roberts_cross_gpu(int *input, int *output, int w, int h) {
+  dim3 BLOCKS(16, 16);
+  dim3 THREADS(32, 32);
+
+  int *dev_input;
+  int *dev_output;
+  cudaMalloc(&amp;amp;dev_input, sizeof(int) * w * h);
+  cudaMalloc(&amp;amp;dev_output, sizeof(int) * w * h);
+  cudaMemcpy(dev_input, input, sizeof(int) * w * h, cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_output, output, sizeof(int) * w * h, cudaMemcpyHostToDevice);
+
+  cudaEvent_t start, stop;
+
+  if (DEBUG &amp;amp;&amp;amp; DEBUG_TIMER) {
+    cudaEventCreate(&amp;amp;start);
+    cudaEventCreate(&amp;amp;stop);
+    cudaEventRecord(start, 0);
+  }
+
+  roberts_cross_kernel&amp;lt;&amp;lt;&amp;lt;BLOCKS, THREADS&amp;gt;&amp;gt;&amp;gt;(dev_input, dev_output, w, h);
+
+  if (DEBUG &amp;amp;&amp;amp; DEBUG_TIMER) {
+    cudaGetLastError();
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+    float t;
+    cudaEventElapsedTime(&amp;amp;t, start, stop);
+    cout &amp;lt;&amp;lt; t &amp;lt;&amp;lt; endl;
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+  }
+
+  cudaMemcpy(output, dev_output, sizeof(int) * w * h, cudaMemcpyDeviceToHost);
+  cudaFree(dev_input);
+  cudaFree(dev_output);
+}
+
+int main() {
+  string path_in;
+  cin &amp;gt;&amp;gt; path_in;
+
+  string path_out;
+  cin &amp;gt;&amp;gt; path_out;
+
+  int w, h;
+  ifstream input_stream;
+  input_stream.open(path_in.c_str(), ios::binary);
+
+  // Размеры изображения
+  input_stream.read((char *)&amp;amp;w, sizeof(int));
+  input_stream.read((char *)&amp;amp;h, sizeof(int));
+
+  // Входное и выходное изображения
+  int *input = new int[w * h];
+  int *output = new int[w * h];
+
+  input_stream.read((char *)input, sizeof(int) * w * h);
+  input_stream.close();
+
+  if (DEBUG &amp;amp;&amp;amp; DEBUG_MATRIX) {
+    cout &amp;lt;&amp;lt; &amp;quot;Before:&amp;quot; &amp;lt;&amp;lt; endl;
+    print(input, w, h);
+    cout &amp;lt;&amp;lt; endl;
+  }
+
+  roberts_cross_gpu(input, output, w, h);
+
+  if (DEBUG &amp;amp;&amp;amp; DEBUG_MATRIX) {
+    cout &amp;lt;&amp;lt; &amp;quot;After:&amp;quot; &amp;lt;&amp;lt; endl;
+    print(output, w, h);
+    cout &amp;lt;&amp;lt; endl;
+  }
+
+  // Запись в файл
+  ofstream output_stream;
+  output_stream.open(path_out.c_str(), ios::binary);
+  output_stream.write((char *)&amp;amp;w, sizeof(int));
+  output_stream.write((char *)&amp;amp;h, sizeof(int));
+  output_stream.write((char *)output, sizeof(int) * w * h);
+  output_stream.close();
+
+  delete[] input;
+  delete[] output;
+
+  return 0;
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Продолжение следует&amp;hellip;&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Nvidia CUDA. Метод Гаусса-Жордана для поиска обратной матрицы</title>
+      <link>https://winogradoff.github.io/post/2016/03/03/cuda-gauss-jordan-inverse-matrix/</link>
       <pubDate>Thu, 03 Mar 2016 21:36:33 +0300</pubDate>
       
-      <guid>https://winogradoff.github.io/post/2016/03/03/gauss-jordan-inverse-matrix/</guid>
+      <guid>https://winogradoff.github.io/post/2016/03/03/cuda-gauss-jordan-inverse-matrix/</guid>
       <description>
 
-&lt;p&gt;Программирование графических процессоров на Nvidia CUDA. Начало.&lt;/p&gt;
+&lt;p&gt;Речь пойдёт про Nvidia CUDA применительно к &lt;a href=&#34;https://ru.wikipedia.org/wiki/%D0%9C%D0%B5%D1%82%D0%BE%D0%B4_%D0%93%D0%B0%D1%83%D1%81%D1%81%D0%B0_%E2%80%94_%D0%96%D0%BE%D1%80%D0%B4%D0%B0%D0%BD%D0%B0&#34;&gt;методу Гаусса-Жордана&lt;/a&gt; для обращения квадратной матрицы.&lt;/p&gt;
 
-&lt;p&gt;Первая лабораторная работа — нахождение обратной матрицы.
-Для этого используется самый обычный &lt;a href=&#34;https://ru.wikipedia.org/wiki/%D0%9C%D0%B5%D1%82%D0%BE%D0%B4_%D0%93%D0%B0%D1%83%D1%81%D1%81%D0%B0_%E2%80%94_%D0%96%D0%BE%D1%80%D0%B4%D0%B0%D0%BD%D0%B0&#34;&gt;метод Гаусса-Жордана&lt;/a&gt;.
-Он заключается в составлении расширенной матрицы. Справа к нашей матрице следует дописать единичную матрицу.&lt;/p&gt;
+&lt;p&gt;Метод состоит из следующих шагов:&lt;/p&gt;
 
-&lt;p&gt;Путем элементарных преобразований левая часть матрицы приводится к верхней треугольной.
-Аналогичные преобразования проделываются в обратном ходе метода, обнуляя элементы над ведущим.
-В итоге в правой части дополненной матрицы мы получим обратную матрицу.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;составить расширенную матрицу (справа дописать единичную),&lt;/li&gt;
+&lt;li&gt;путем элементарных преобразований привести левую часть матрицы к единичной.&lt;/li&gt;
+&lt;/ul&gt;
 
-&lt;h3 id=&#34;алгоритм-на-python:f386d8bd3c74b1c6b09568d7b0bbcc75&#34;&gt;Алгоритм на Python&lt;/h3&gt;
+&lt;p&gt;В результате в правой части расширенной матрицы получим обратную матрицу.&lt;/p&gt;
+
+&lt;h3 id=&#34;алгоритм-на-python:78d2c4bac1c182ce8d8708a40eebb2fb&#34;&gt;Алгоритм на Python&lt;/h3&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;from copy import deepcopy
 import sys
@@ -120,7 +327,7 @@ if __name__ == &#39;__main__&#39;:
     main()
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h3 id=&#34;а-теперь-на-c:f386d8bd3c74b1c6b09568d7b0bbcc75&#34;&gt;А теперь на C++&lt;/h3&gt;
+&lt;h3 id=&#34;на-c:78d2c4bac1c182ce8d8708a40eebb2fb&#34;&gt;На C++&lt;/h3&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-cpp&#34;&gt;#include &amp;lt;iostream&amp;gt;
 #include &amp;lt;iomanip&amp;gt;
@@ -258,7 +465,7 @@ int main() {
 }
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h3 id=&#34;что-нужно-для-написания-версии-под-cuda:f386d8bd3c74b1c6b09568d7b0bbcc75&#34;&gt;Что нужно для написания версии под CUDA?&lt;/h3&gt;
+&lt;h3 id=&#34;что-нужно-для-написания-версии-под-cuda:78d2c4bac1c182ce8d8708a40eebb2fb&#34;&gt;Что нужно для написания версии под CUDA?&lt;/h3&gt;
 
 &lt;ul&gt;
 &lt;li&gt;Выделить независимые подпрограммы, которые можно распараллелить:
@@ -299,7 +506,7 @@ int main() {
 &lt;/ol&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;h3 id=&#34;итоговый-код-на-cuda:f386d8bd3c74b1c6b09568d7b0bbcc75&#34;&gt;Итоговый код на CUDA:&lt;/h3&gt;
+&lt;h3 id=&#34;итоговый-код-на-cuda:78d2c4bac1c182ce8d8708a40eebb2fb&#34;&gt;Итоговый код на CUDA:&lt;/h3&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-cpp&#34;&gt;#include &amp;lt;iostream&amp;gt;
 #include &amp;lt;cmath&amp;gt;
@@ -561,7 +768,7 @@ int main() {
 }
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;Подход к параллельным вычислениям предлагаемый Nvidia довольно прост: давайте ускорим циклы с однотипными действиями.&lt;/p&gt;
+&lt;p&gt;Подход к параллельным вычислениям предлагаемый Nvidia довольно прост: ускорить циклы с однотипными действиями.&lt;/p&gt;
 
 &lt;p&gt;Стоит отметить, что &lt;strong&gt;основная сложность&lt;/strong&gt; при написании программ на CUDA — выделение тех частей алгоритма, которые можно распараллелить.&lt;/p&gt;
 

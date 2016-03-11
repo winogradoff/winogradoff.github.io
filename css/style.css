@@ -68,8 +68,8 @@ blockquote {
     width: 100%; }
 
 img {
-  display: block;
-  margin: 40px 0;
+  /*display: block;*/
+  margin: 0;
   width: auto;
   max-width: 100%; }
 
@@ -257,10 +257,10 @@ table {
     color: #F03838; }
   .post-date:after,
   .blog-description:after {
-    border-bottom: 1px dotted #303030;
+    /*border-bottom: 1px dotted #303030;*/
     content: "";
     display: block;
-    margin: 40px auto 0;
+    margin: 15px auto 0;
     width: 100px; }
 
 .post-content a:hover {

@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-        <title>Обращение матрицы на Nvidia CUDA &middot; Иван Виноградов</title>
+        <title>Nvidia CUDA. Метод Гаусса-Жордана для поиска обратной матрицы &middot; Иван Виноградов</title>
         <meta name="description" content="">
         <meta name="HandheldFriendly" content="True">
         <meta name="MobileOptimized" content="320">
@@ -99,7 +99,7 @@
 <div class="container">
     <article class="post-container" itemscope="" itemtype="http://schema.org/BlogPosting">
         <header class="post-header">
-    <h1 class="post-title" itemprop="name headline">Обращение матрицы на Nvidia CUDA</h1>
+    <h1 class="post-title" itemprop="name headline">Nvidia CUDA. Метод Гаусса-Жордана для поиска обратной матрицы</h1>
     
     <p class="post-date">
         <span><time datetime="03.03.2016" itemprop="datePublished">03.03.2016</time></span>
@@ -115,17 +115,18 @@
 
     
 
-<p>Программирование графических процессоров на Nvidia CUDA. Начало.</p>
+<p>Речь пойдёт про Nvidia CUDA применительно к <a href="https://ru.wikipedia.org/wiki/%D0%9C%D0%B5%D1%82%D0%BE%D0%B4_%D0%93%D0%B0%D1%83%D1%81%D1%81%D0%B0_%E2%80%94_%D0%96%D0%BE%D1%80%D0%B4%D0%B0%D0%BD%D0%B0">методу Гаусса-Жордана</a> для обращения квадратной матрицы.</p>
 
-<p>Первая лабораторная работа — нахождение обратной матрицы.
-Для этого используется самый обычный <a href="https://ru.wikipedia.org/wiki/%D0%9C%D0%B5%D1%82%D0%BE%D0%B4_%D0%93%D0%B0%D1%83%D1%81%D1%81%D0%B0_%E2%80%94_%D0%96%D0%BE%D1%80%D0%B4%D0%B0%D0%BD%D0%B0">метод Гаусса-Жордана</a>.
-Он заключается в составлении расширенной матрицы. Справа к нашей матрице следует дописать единичную матрицу.</p>
+<p>Метод состоит из следующих шагов:</p>
 
-<p>Путем элементарных преобразований левая часть матрицы приводится к верхней треугольной.
-Аналогичные преобразования проделываются в обратном ходе метода, обнуляя элементы над ведущим.
-В итоге в правой части дополненной матрицы мы получим обратную матрицу.</p>
+<ul>
+<li>составить расширенную матрицу (справа дописать единичную),</li>
+<li>путем элементарных преобразований привести левую часть матрицы к единичной.</li>
+</ul>
 
-<h3 id="алгоритм-на-python:f386d8bd3c74b1c6b09568d7b0bbcc75">Алгоритм на Python</h3>
+<p>В результате в правой части расширенной матрицы получим обратную матрицу.</p>
+
+<h3 id="алгоритм-на-python:78d2c4bac1c182ce8d8708a40eebb2fb">Алгоритм на Python</h3>
 
 <pre><code class="language-python">from copy import deepcopy
 import sys
@@ -217,7 +218,7 @@ if __name__ == '__main__':
     main()
 </code></pre>
 
-<h3 id="а-теперь-на-c:f386d8bd3c74b1c6b09568d7b0bbcc75">А теперь на C++</h3>
+<h3 id="на-c:78d2c4bac1c182ce8d8708a40eebb2fb">На C++</h3>
 
 <pre><code class="language-cpp">#include &lt;iostream&gt;
 #include &lt;iomanip&gt;
@@ -355,7 +356,7 @@ int main() {
 }
 </code></pre>
 
-<h3 id="что-нужно-для-написания-версии-под-cuda:f386d8bd3c74b1c6b09568d7b0bbcc75">Что нужно для написания версии под CUDA?</h3>
+<h3 id="что-нужно-для-написания-версии-под-cuda:78d2c4bac1c182ce8d8708a40eebb2fb">Что нужно для написания версии под CUDA?</h3>
 
 <ul>
 <li>Выделить независимые подпрограммы, которые можно распараллелить:
@@ -396,7 +397,7 @@ int main() {
 </ol></li>
 </ul>
 
-<h3 id="итоговый-код-на-cuda:f386d8bd3c74b1c6b09568d7b0bbcc75">Итоговый код на CUDA:</h3>
+<h3 id="итоговый-код-на-cuda:78d2c4bac1c182ce8d8708a40eebb2fb">Итоговый код на CUDA:</h3>
 
 <pre><code class="language-cpp">#include &lt;iostream&gt;
 #include &lt;cmath&gt;
@@ -658,7 +659,7 @@ int main() {
 }
 </code></pre>
 
-<p>Подход к параллельным вычислениям предлагаемый Nvidia довольно прост: давайте ускорим циклы с однотипными действиями.</p>
+<p>Подход к параллельным вычислениям предлагаемый Nvidia довольно прост: ускорить циклы с однотипными действиями.</p>
 
 <p>Стоит отметить, что <strong>основная сложность</strong> при написании программ на CUDA — выделение тех частей алгоритма, которые можно распараллелить.</p>
 

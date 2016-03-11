@@ -3,12 +3,17 @@
   
   <url>
     <loc>https://winogradoff.github.io/</loc>
-    <lastmod>2016-03-03T21:36:33+03:00</lastmod>
+    <lastmod>2016-03-11T06:09:32+03:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
-    <loc>https://winogradoff.github.io/post/2016/03/03/gauss-jordan-inverse-matrix/</loc>
+    <loc>https://winogradoff.github.io/post/2016/03/11/cuda-roberts-cross-operator/</loc>
+    <lastmod>2016-03-11T06:09:32+03:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://winogradoff.github.io/post/2016/03/03/cuda-gauss-jordan-inverse-matrix/</loc>
     <lastmod>2016-03-03T21:36:33+03:00</lastmod>
   </url>
   

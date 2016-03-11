@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <title>Nvidia CUDA. Выделение границ с помощью перекрёстного оператора Робертса &middot; Иван Виноградов</title>
+        <meta name="description" content="">
+        <meta name="HandheldFriendly" content="True">
+        <meta name="MobileOptimized" content="320">
+        <meta name="generator" content="Hugo 0.15" />
+        <meta name="robots" content="index,follow">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="https://winogradoff.github.io/css/normalize.css">
+        <link rel="stylesheet" href="https://winogradoff.github.io/css/highlight.css">
+        <link rel="stylesheet" href="https://winogradoff.github.io/css/style.css">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,400,600,700,300&subset=latin,cyrillic-ext,latin-ext,cyrillic">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+    </head>
+    <body>
+        
+
+<script type="text/javascript">
+    (function (d, w, c) {
+        (w[c] = w[c] || []).push(function() {
+            try {
+                w.yaCounter35599795 = new Ya.Metrika({
+                    id: 35599795,
+                    clickmap:true,
+                    trackLinks:true,
+                    accurateTrackBounce:true
+                });
+            } catch(e) { }
+        });
+
+        var n = d.getElementsByTagName("script")[0],
+            s = d.createElement("script"),
+            f = function () { n.parentNode.insertBefore(s, n); };
+        s.type = "text/javascript";
+        s.async = true;
+        s.src = "https://mc.yandex.ru/metrika/watch.js";
+
+        if (w.opera == "[object Opera]") {
+            d.addEventListener("DOMContentLoaded", f, false);
+        } else { f(); }
+    })(document, window, "yandex_metrika_callbacks");
+</script>
+<noscript><div><img src="https://mc.yandex.ru/watch/35599795" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+
+
+
+
+        <div id="wrapper">
+            <header class="site-header">
+                <div class="container">
+                    <div class="site-title-wrapper">
+                        
+                            <h1 class="site-title">
+                                <a title="Главная" href="https://winogradoff.github.io/">Главная</a>
+                            </h1>
+                        
+                        <a class="button-square" href="https://winogradoff.github.io/index.xml" target="_blank"><i class="fa fa-rss"></i></a>
+                        
+                            <a class="button-square button-social hint--top" data-hint="Twitter" title="Twitter" href="https://twitter.com/ivan_vinogradov" target="_blank">
+                                <i class="fa fa-twitter"></i>
+                            </a>
+                        
+                        
+                            <a class="button-square button-social hint--top" data-hint="Github" title="Github" href="https://github.com/winogradoff" target="_blank">
+                                <i class="fa fa-github-alt"></i>
+                            </a>
+                        
+                        
+                        
+                        
+                        
+                            <a class="button-square button-social hint--top" data-hint="VK" title="VK" href="https://vk.com/iwish" target="_blank">
+                                <i class="fa fa-vk"></i>
+                            </a>
+                        
+                    </div>
+
+                    <ul class="site-nav">
+                        
+    <li class="site-nav-item">
+        <a title="Бложик" href="/post/">Бложик</a>
+    </li>
+
+    <li class="site-nav-item">
+        <a title="Автор" href="/page/about/">Автор</a>
+    </li>
+
+                    </ul>
+                </div>
+            </header>
+
+            <div id="container">
+
+
+<div class="container">
+    <article class="post-container" itemscope="" itemtype="http://schema.org/BlogPosting">
+        <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Nvidia CUDA. Выделение границ с помощью перекрёстного оператора Робертса</h1>
+    
+    <p class="post-date">
+        <span><time datetime="11.03.2016" itemprop="datePublished">11.03.2016</time></span>
+
+        
+
+    </p>
+</header>
+
+
+        <div class="post-content clearfix" itemprop="articleBody">
+    
+
+    <p><em>Из <a href="https://ru.wikipedia.org/wiki/%D0%9F%D0%B5%D1%80%D0%B5%D0%BA%D1%80%D1%91%D1%81%D1%82%D0%BD%D1%8B%D0%B9_%D0%BE%D0%BF%D0%B5%D1%80%D0%B0%D1%82%D0%BE%D1%80_%D0%A0%D0%BE%D0%B1%D0%B5%D1%80%D1%82%D1%81%D0%B0">статьи на Википедии</a>:</em></p>
+
+<p>В компьютерном зрении перекрёстный оператор Робертса — один из ранних алгоритмов выделения границ, который вычисляет сумму квадратов разниц между диагонально смежными пикселами. Это может быть выполнено сверткой изображения с двумя ядрами:</p>
+
+<p style="text-align: center">
+<img src="/img/cuda-roberts-cross-operator/wiki_1.png" title="/img/cuda-roberts-cross-operator/wiki_1.png" />
+</p>
+
+<p>Иными словами, каждый пиксель получаемого изображения вычисляется по правилу:</p>
+
+<pre><code>a = input_image(x, y) - input_image(x + 1, y + 1)
+b = input_image(x + 1,y) - input_image(x, y + 1)
+output_image(x, y) = Sqrt(a^2 + b^2)
+</code></pre>
+
+<p>Что это всё значит разберём чуть позже, а пока давайте взглянем на работу фильтра:</p>
+
+<p><img src="/img/cuda-roberts-cross-operator/example_1_before.jpg" alt="Оригинальное изображение" /></p>
+
+<p><img src="/img/cuda-roberts-cross-operator/example_1_after.jpg" alt="После фильтрации с помощью перекрёстного оператора Робертса" /></p>
+
+<p><img src="/img/cuda-roberts-cross-operator/example_2_before.jpg" alt="Оригинальное изображение" /></p>
+
+<p><img src="/img/cuda-roberts-cross-operator/example_2_after.jpg" alt="После фильтрации с помощью перекрёстного оператора Робертса" /></p>
+
+<p><img src="/img/cuda-roberts-cross-operator/example_3_before.jpg" alt="Оригинальное изображение" /></p>
+
+<p><img src="/img/cuda-roberts-cross-operator/example_3_after.jpg" alt="После фильтрации с помощью перекрёстного оператора Робертса" /></p>
+
+<p>Код алгоритма на CUDA:</p>
+
+<pre><code class="language-cpp">
+#include &lt;iostream&gt;
+#include &lt;fstream&gt;
+#include &lt;iomanip&gt;
+#include &lt;string&gt;
+#include &lt;cmath&gt;
+#include &lt;algorithm&gt;
+
+#define uint unsigned int
+
+#define DEBUG true
+#define DEBUG_MATRIX false
+#define DEBUG_TIMER true
+
+using namespace std;
+
+void print(int *matrix, int w, int h) {
+  for (int i = 0; i &lt; h; i++) {
+    for (int j = 0; j &lt; w; j++) {
+      int c = matrix[i * w + j];
+      cout &lt;&lt; setw(4) &lt;&lt; (int)(c &amp; 0xff) &lt;&lt; &quot;,&quot;;
+      cout &lt;&lt; setw(4) &lt;&lt; (int)((c &gt;&gt; 8) &amp; 0xff) &lt;&lt; &quot;,&quot;;
+      cout &lt;&lt; setw(4) &lt;&lt; (int)((c &gt;&gt; 16) &amp; 0xff) &lt;&lt; &quot;,&quot;;
+      cout &lt;&lt; setw(4) &lt;&lt; (int)((c &gt;&gt; 24) &amp; 0xff) &lt;&lt; &quot;\t&quot;;
+    }
+    cout &lt;&lt; endl;
+  }
+}
+
+__device__ int get_element(int *input, int w, int h, int i, int j) {
+  i = max(0, min(i, h - 1));
+  j = max(0, min(j, w - 1));
+  return input[i * w + j];
+}
+
+__device__ int pack(int4 rgba) {
+  return (rgba.w &lt;&lt; 24) | (rgba.z &lt;&lt; 16) | (rgba.y &lt;&lt; 8) | rgba.x;
+}
+
+__device__ int4 unpack(int c) {
+  int4 rgba;
+  rgba.x = c &amp; 0xff;
+  rgba.y = (c &gt;&gt; 8) &amp; 0xff;
+  rgba.z = (c &gt;&gt; 16) &amp; 0xff;
+  rgba.w = (c &gt;&gt; 24) &amp; 0xff;
+  return rgba;
+}
+
+__device__ double intensity(int4 rgba) {
+  return 0.299 * rgba.x + 0.587 * rgba.y + 0.114 * rgba.z;
+}
+
+__global__ void roberts_cross_kernel(int *input, int *output, int w, int h) {
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  int idy = blockIdx.y * blockDim.y + threadIdx.y;
+  int offsetx = gridDim.x * blockDim.x;
+  int offsety = gridDim.y * blockDim.y;
+
+  for (int i = idx; i &lt; h; i += offsetx) {
+    for (int j = idy; j &lt; w; j += offsety) {
+      double m = intensity(unpack(get_element(input, w, h, i, j)));
+      double br = intensity(unpack(get_element(input, w, h, i + 1, j + 1)));
+      double r = intensity(unpack(get_element(input, w, h, i, j + 1)));
+      double b = intensity(unpack(get_element(input, w, h, i + 1, j)));
+
+      double tmp1 = m - br;
+      double tmp2 = r - b;
+
+      // Нормировка
+      int result = min(255, (int)sqrt(tmp1 * tmp1 + tmp2 * tmp2));
+
+      // Записываем интенсивность в RGB
+      output[i * w + j] = pack(make_int4(result, result, result, 0));
+    }
+  }
+}
+
+void roberts_cross_gpu(int *input, int *output, int w, int h) {
+  dim3 BLOCKS(16, 16);
+  dim3 THREADS(32, 32);
+
+  int *dev_input;
+  int *dev_output;
+  cudaMalloc(&amp;dev_input, sizeof(int) * w * h);
+  cudaMalloc(&amp;dev_output, sizeof(int) * w * h);
+  cudaMemcpy(dev_input, input, sizeof(int) * w * h, cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_output, output, sizeof(int) * w * h, cudaMemcpyHostToDevice);
+
+  cudaEvent_t start, stop;
+
+  if (DEBUG &amp;&amp; DEBUG_TIMER) {
+    cudaEventCreate(&amp;start);
+    cudaEventCreate(&amp;stop);
+    cudaEventRecord(start, 0);
+  }
+
+  roberts_cross_kernel&lt;&lt;&lt;BLOCKS, THREADS&gt;&gt;&gt;(dev_input, dev_output, w, h);
+
+  if (DEBUG &amp;&amp; DEBUG_TIMER) {
+    cudaGetLastError();
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+    float t;
+    cudaEventElapsedTime(&amp;t, start, stop);
+    cout &lt;&lt; t &lt;&lt; endl;
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+  }
+
+  cudaMemcpy(output, dev_output, sizeof(int) * w * h, cudaMemcpyDeviceToHost);
+  cudaFree(dev_input);
+  cudaFree(dev_output);
+}
+
+int main() {
+  string path_in;
+  cin &gt;&gt; path_in;
+
+  string path_out;
+  cin &gt;&gt; path_out;
+
+  int w, h;
+  ifstream input_stream;
+  input_stream.open(path_in.c_str(), ios::binary);
+
+  // Размеры изображения
+  input_stream.read((char *)&amp;w, sizeof(int));
+  input_stream.read((char *)&amp;h, sizeof(int));
+
+  // Входное и выходное изображения
+  int *input = new int[w * h];
+  int *output = new int[w * h];
+
+  input_stream.read((char *)input, sizeof(int) * w * h);
+  input_stream.close();
+
+  if (DEBUG &amp;&amp; DEBUG_MATRIX) {
+    cout &lt;&lt; &quot;Before:&quot; &lt;&lt; endl;
+    print(input, w, h);
+    cout &lt;&lt; endl;
+  }
+
+  roberts_cross_gpu(input, output, w, h);
+
+  if (DEBUG &amp;&amp; DEBUG_MATRIX) {
+    cout &lt;&lt; &quot;After:&quot; &lt;&lt; endl;
+    print(output, w, h);
+    cout &lt;&lt; endl;
+  }
+
+  // Запись в файл
+  ofstream output_stream;
+  output_stream.open(path_out.c_str(), ios::binary);
+  output_stream.write((char *)&amp;w, sizeof(int));
+  output_stream.write((char *)&amp;h, sizeof(int));
+  output_stream.write((char *)output, sizeof(int) * w * h);
+  output_stream.close();
+
+  delete[] input;
+  delete[] output;
+
+  return 0;
+}
+</code></pre>
+
+<p>Продолжение следует&hellip;</p>
+
+</div>
+
+        <footer class="post-footer clearfix">
+    
+
+    
+
+</footer>
+
+
+        
+
+
+        
+    <div class="comments">
+        <div id="vk_comments"></div>
+        <script type="text/javascript" src="//vk.com/js/api/openapi.js?121"></script>
+        <script type="text/javascript">
+            VK.init({apiId:  5312204 , onlyWidgets: true});
+        </script>
+        <script type="text/javascript">
+            VK.Widgets.Comments("vk_comments", {limit: 5, width: "600", attach: false});
+        </script>
+        <style>
+            #vk_comments, #vk_comments iframe {
+                width: 100% !important;
+            }
+        </style>
+    </div>
+
+
+    </article>
+</div>
+
+            </div>
+        </div>
+
+        <footer class="footer">
+            <div class="container">
+                <div class="site-title-wrapper">
+                    <h1 class="site-title">
+                        <a title="Главная" href="https://winogradoff.github.io/">Главная</a>
+                    </h1>
+                    <a class="button-square button-jump-top js-jump-top" href="#">
+                        <i class="fa fa-angle-up"></i>
+                    </a>
+                </div>
+            </div>
+        </footer>
+
+        <script src="https://winogradoff.github.io/js/jquery-1.11.3.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/8.5/highlight.min.js"></script>
+        <script src="https://winogradoff.github.io/js/jquery.fitvids.js"></script>
+        <script src="https://winogradoff.github.io/js/scripts.js"></script>
+    </body>
+</html>
+
