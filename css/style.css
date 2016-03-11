@@ -141,7 +141,7 @@ table {
     content: "";
     display: block;
     /* This must be the same as the height of the footer */
-    height: 100px; }
+    height: 150px; }
 
 .button {
   background: #303030;
