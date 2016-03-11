@@ -28,7 +28,7 @@
 Аналогичные преобразования проделываются в обратном ходе метода, обнуляя элементы над ведущим.
 В итоге в правой части дополненной матрицы мы получим обратную матрицу.&lt;/p&gt;
 
-&lt;h3 id=&#34;вспомним-алгоритм-на-python:f386d8bd3c74b1c6b09568d7b0bbcc75&#34;&gt;Вспомним алгоритм на Python:&lt;/h3&gt;
+&lt;h3 id=&#34;алгоритм-на-python:f386d8bd3c74b1c6b09568d7b0bbcc75&#34;&gt;Алгоритм на Python&lt;/h3&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;from copy import deepcopy
 import sys
@@ -120,175 +120,141 @@ if __name__ == &#39;__main__&#39;:
     main()
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h3 id=&#34;перепишем-тоже-самое-с-небольшими-изменениями-на-c:f386d8bd3c74b1c6b09568d7b0bbcc75&#34;&gt;Перепишем тоже самое (с небольшими изменениями) на C++:&lt;/h3&gt;
-
-&lt;ul&gt;
-&lt;li&gt;функции не возвращают новые матрицы, а делают изменения в переденных,&lt;/li&gt;
-&lt;li&gt;повторяющиеся части разнесены по отдельным функциям.&lt;/li&gt;
-&lt;/ul&gt;
+&lt;h3 id=&#34;а-теперь-на-c:f386d8bd3c74b1c6b09568d7b0bbcc75&#34;&gt;А теперь на C++&lt;/h3&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-cpp&#34;&gt;#include &amp;lt;iostream&amp;gt;
-#include &amp;lt;iomanip&amp;gt;  
+#include &amp;lt;iomanip&amp;gt;
 #include &amp;lt;cmath&amp;gt;
 
 using namespace std;
 
-
-void print(double *matrix, int n)
-{
-    cout &amp;lt;&amp;lt; scientific;
-    for(int i = 0; i &amp;lt; n; i++)
-    {
-        for(int j = 0; j &amp;lt; n; j++)
-        {
-            cout &amp;lt;&amp;lt; matrix[i * n + j] &amp;lt;&amp;lt; &amp;quot;\t&amp;quot;;
-        }
-        cout &amp;lt;&amp;lt; endl;
+void print(double *matrix, int n) {
+  cout &amp;lt;&amp;lt; scientific;
+  for (int i = 0; i &amp;lt; n; i++) {
+    for (int j = 0; j &amp;lt; n; j++) {
+      cout &amp;lt;&amp;lt; matrix[i * n + j] &amp;lt;&amp;lt; &amp;quot;\t&amp;quot;;
     }
+    cout &amp;lt;&amp;lt; endl;
+  }
 }
 
 // Обмен строк в матрице
-void swap_lines(double *matrix, double *identity, int n, int i, int j)
-{    
-    double temp;
-    for(int k = 0; k &amp;lt; n; k++)
-    {
-        temp = matrix[i * n + k];
-        matrix[i * n + k] = matrix[j * n + k];
-        matrix[j * n + k] = temp;
+void swap_lines(double *matrix, double *identity, int n, int i, int j) {
+  double temp;
+  for (int k = 0; k &amp;lt; n; k++) {
+    temp = matrix[i * n + k];
+    matrix[i * n + k] = matrix[j * n + k];
+    matrix[j * n + k] = temp;
 
-        temp = identity[i * n + k];
-        identity[i * n + k] = identity[j * n + k];
-        identity[j * n + k] = temp;
-    }
+    temp = identity[i * n + k];
+    identity[i * n + k] = identity[j * n + k];
+    identity[j * n + k] = temp;
+  }
 }
 
 // Поставить на место row строку с наибольшим ведущим коэффициентом
-void pivotize(double *matrix, double *identity, int n, int row)
-{    
-    int max_index = row;
-    double max_value = fabs(matrix[row * n + row]);
-    double current_value;
-    for(int i = row + 1; i &amp;lt; n; i++)
-    {
-        current_value = fabs(matrix[i * n + row]);
-        if(current_value &amp;gt; max_value)
-        {
-            max_index = i;
-            max_value = current_value;
-        }
+void pivotize(double *matrix, double *identity, int n, int row) {
+  int max_index = row;
+  double max_value = fabs(matrix[row * n + row]);
+  double current_value;
+  for (int i = row + 1; i &amp;lt; n; i++) {
+    current_value = fabs(matrix[i * n + row]);
+    if (current_value &amp;gt; max_value) {
+      max_index = i;
+      max_value = current_value;
     }
+  }
 
-    if(row != max_index)
-    {
-        swap_lines(matrix, identity, n, row, max_index);
-    }
+  if (row != max_index) {
+    swap_lines(matrix, identity, n, row, max_index);
+  }
 }
 
 // Разделить строку матрицы на значение
-void devide(double *matrix, int n, int i, double denominator)
-{
-    for(int j = 0; j &amp;lt; n; j++)
-    {
-        matrix[i * n + j] /= denominator;
-    }
+void devide(double *matrix, int n, int i, double denominator) {
+  for (int j = 0; j &amp;lt; n; j++) {
+    matrix[i * n + j] /= denominator;
+  }
 }
 
 // Обнуление элементов под ведущим элементом в строке x
-void subtract_below(double *matrix, double *identity, int n, int x)
-{
-    double coeff;
-    for(int i = x + 1; i &amp;lt; n; i++)
-    {
-        coeff = matrix[i * n + x] / matrix[x * n + x];
-        for(int j = x; j &amp;lt; n; j++)
-        {
-            matrix[i * n + j] -= coeff * matrix[x * n + j];
-        }
-        for(int j = 0; j &amp;lt; n; j++)
-        {
-            identity[i * n + j] -= coeff * identity[x * n + j];
-        }
+void subtract_below(double *matrix, double *identity, int n, int x) {
+  double coeff;
+  for (int i = x + 1; i &amp;lt; n; i++) {
+    coeff = matrix[i * n + x] / matrix[x * n + x];
+    for (int j = x; j &amp;lt; n; j++) {
+      matrix[i * n + j] -= coeff * matrix[x * n + j];
     }
+    for (int j = 0; j &amp;lt; n; j++) {
+      identity[i * n + j] -= coeff * identity[x * n + j];
+    }
+  }
 }
 
 // Обнуление элементов над ведущим элементом в строке x
-void subtract_above(double *matrix, double *identity, int n, int x)
-{
-    double coeff;
-    for(int i = x - 1; i &amp;gt;= 0; i--)
-    {
-        coeff = matrix[i * n + x] / matrix[x * n + x];
-        for(int j = x; j &amp;gt;= 0; j--)
-        {
-            matrix[i * n + j] -= coeff * matrix[x * n + j];
-        }
-        for(int j = 0; j &amp;lt; n; j++)
-        {
-            identity[i * n + j] -= coeff * identity[x * n + j];
-        }
+void subtract_above(double *matrix, double *identity, int n, int x) {
+  double coeff;
+  for (int i = x - 1; i &amp;gt;= 0; i--) {
+    coeff = matrix[i * n + x] / matrix[x * n + x];
+    for (int j = x; j &amp;gt;= 0; j--) {
+      matrix[i * n + j] -= coeff * matrix[x * n + j];
     }
+    for (int j = 0; j &amp;lt; n; j++) {
+      identity[i * n + j] -= coeff * identity[x * n + j];
+    }
+  }
 }
 
 // Обращение матрицы методом Гаусса-Жордана
-void inverse(double *matrix, double *identity, int n)
-{        
-    // Прямой ход
-    for(int i = 0; i &amp;lt; n - 1; i++)
-    {
-        // Обмен строк
-        pivotize(matrix, identity, n, i);
+void inverse(double *matrix, double *identity, int n) {
+  // Прямой ход
+  for (int i = 0; i &amp;lt; n - 1; i++) {
+    // Обмен строк
+    pivotize(matrix, identity, n, i);
 
-        // Обнулить элементы ниже ведущего
-        subtract_below(matrix, identity, n, i);
-    }
+    // Обнулить элементы ниже ведущего
+    subtract_below(matrix, identity, n, i);
+  }
 
-    // Обратный ход
-    for(int i = n - 1; i &amp;gt; 0; i--)
-    {
-        // Обнулить элементы выше ведущего
-        subtract_above(matrix, identity, n, i);
-    }
+  // Обратный ход
+  for (int i = n - 1; i &amp;gt; 0; i--) {
+    // Обнулить элементы выше ведущего
+    subtract_above(matrix, identity, n, i);
+  }
 
-    // Разделить строки на ведущие элементы
-    for(int i = 0; i &amp;lt; n; i++)
-    {
-        devide(identity, n, i, matrix[i * n + i]);
-        devide(matrix, n, i, matrix[i * n + i]);
-    }
+  // Разделить строки на ведущие элементы
+  for (int i = 0; i &amp;lt; n; i++) {
+    devide(identity, n, i, matrix[i * n + i]);
+    devide(matrix, n, i, matrix[i * n + i]);
+  }
 }
 
-int main()
-{
-    int n;
-    cin &amp;gt;&amp;gt; n;
+int main() {
+  int n;
+  cin &amp;gt;&amp;gt; n;
 
-    double *matrix = new double[n * n];
-    double *identity = new double[n * n];
+  double *matrix = new double[n * n];
+  double *identity = new double[n * n];
 
-    for(int i = 0; i &amp;lt; n; i++)
-    {
-        for(int j = 0; j &amp;lt; n; j++)
-        {
-            cin &amp;gt;&amp;gt; matrix[i * n + j];
-        }
+  for (int i = 0; i &amp;lt; n; i++) {
+    for (int j = 0; j &amp;lt; n; j++) {
+      cin &amp;gt;&amp;gt; matrix[i * n + j];
     }
+  }
 
-    for(int i = 0; i &amp;lt; n; i++)
-    {
-        for(int j = 0; j &amp;lt; n; j++)
-        {
-            identity[i * n + j] = i == j ? 1.0 : 0.0;
-        }
+  for (int i = 0; i &amp;lt; n; i++) {
+    for (int j = 0; j &amp;lt; n; j++) {
+      identity[i * n + j] = i == j ? 1.0 : 0.0;
     }
+  }
 
-    inverse(matrix, identity, n);
-    print(identity, n);
+  inverse(matrix, identity, n);
+  print(identity, n);
 
-    delete[] matrix;
-    delete[] identity;
+  delete[] matrix;
+  delete[] identity;
 
-    return 0;
+  return 0;
 }
 &lt;/code&gt;&lt;/pre&gt;
 
@@ -347,305 +313,259 @@ using namespace std;
 // Индекс строки с максимальным элементом из find_max_element_in_columnt()
 __device__ int max_element_index;
 
-void print(double *matrix, int n)
-{
-    cout &amp;lt;&amp;lt; scientific;
-    for(int i = 0; i &amp;lt; n; i++)
-    {
-        for(int j = 0; j &amp;lt; n; j++)
-        {
-            cout &amp;lt;&amp;lt; matrix[i * n + j] &amp;lt;&amp;lt; &amp;quot;\t&amp;quot;;  
-        }
-        cout &amp;lt;&amp;lt; endl;
+void print(double* matrix, int n) {
+  cout &amp;lt;&amp;lt; scientific;
+  for (int i = 0; i &amp;lt; n; i++) {
+    for (int j = 0; j &amp;lt; n; j++) {
+      cout &amp;lt;&amp;lt; matrix[i * n + j] &amp;lt;&amp;lt; &amp;quot;\t&amp;quot;;
     }
+    cout &amp;lt;&amp;lt; endl;
+  }
 }
 
-void print_both(double *matrix, double *identity, int n)
-{
-    cout &amp;lt;&amp;lt; scientific;
-    for(int i = 0; i &amp;lt; n; i++)
-    {
-        for(int j = 0; j &amp;lt; 2 * n; j++)
-        {
-            if(j &amp;lt; n)
-            {
-                cout &amp;lt;&amp;lt; matrix[i * n + j] &amp;lt;&amp;lt; &amp;quot;\t&amp;quot;;
-            }
-            else
-            {
-                cout &amp;lt;&amp;lt; identity[i * n + j - n] &amp;lt;&amp;lt; &amp;quot;\t&amp;quot;;
-            }
-            
-        }
-        cout &amp;lt;&amp;lt; endl;
+void print_both(double* matrix, double* identity, int n) {
+  cout &amp;lt;&amp;lt; scientific;
+  for (int i = 0; i &amp;lt; n; i++) {
+    for (int j = 0; j &amp;lt; 2 * n; j++) {
+      if (j &amp;lt; n) {
+        cout &amp;lt;&amp;lt; matrix[i * n + j] &amp;lt;&amp;lt; &amp;quot;\t&amp;quot;;
+      } else {
+        cout &amp;lt;&amp;lt; identity[i * n + j - n] &amp;lt;&amp;lt; &amp;quot;\t&amp;quot;;
+      }
     }
+    cout &amp;lt;&amp;lt; endl;
+  }
 }
 
 // Обмен строк
-__global__ void swap_lines(double *dev_matrix, double *dev_identity, int n, int row)
-{
-    if(row == max_element_index)
-    {
-        return;
-    }
+__global__ void swap_lines(double* matrix, double* identity, int n, int row) {
+  if (row == max_element_index) {
+    return;
+  }
 
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    int offset = gridDim.x * blockDim.x;
-    
-    double temp;
-    for(; idx &amp;lt; n; idx += offset)
-    {
-        temp = dev_matrix[row * n + idx];
-        dev_matrix[row * n + idx] = dev_matrix[max_element_index * n + idx];
-        dev_matrix[max_element_index * n + idx] = temp;
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  int offset = gridDim.x * blockDim.x;
 
-        temp = dev_identity[row * n + idx];
-        dev_identity[row * n + idx] = dev_identity[max_element_index * n + idx];
-        dev_identity[max_element_index * n + idx] = temp;
-    }
+  double temp;
+  for (; idx &amp;lt; n; idx += offset) {
+    temp = matrix[row * n + idx];
+    matrix[row * n + idx] = matrix[max_element_index * n + idx];
+    matrix[max_element_index * n + idx] = temp;
+
+    temp = identity[row * n + idx];
+    identity[row * n + idx] = identity[max_element_index * n + idx];
+    identity[max_element_index * n + idx] = temp;
+  }
 }
 
 // Сохранение индекса строки с максимальным элементом в max_element_index на GPU
-__global__ void max_in_column(double *dev_matrix, int n, int row)
-{
-    int max_index = row;
-    double max_value = fabs(dev_matrix[row * n + row]);
-    double current_value;
+__global__ void max_in_column(double* matrix, int n, int x) {
+  int max_index = x;
+  double max_value = fabs(matrix[x * n + x]);
+  double current_value;
 
-    for(int i = row + 1; i &amp;lt; n; i++)
-    {
-        current_value = fabs(dev_matrix[i * n + row]);
-        if(current_value &amp;gt; max_value)
-        {
-            max_index = i;
-            max_value = current_value;
-        }
+  for (int i = x + 1; i &amp;lt; n; i++) {
+    current_value = fabs(matrix[i * n + x]);
+    if (current_value &amp;gt; max_value) {
+      max_index = i;
+      max_value = current_value;
     }
+  }
 
-    max_element_index = max_index;
+  max_element_index = max_index;
 }
 
-__global__ void devide_identity(double *dev_matrix, double *dev_identity, int n)
-{
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    int idy = blockIdx.y * blockDim.y + threadIdx.y;
-    int offsetx = gridDim.x * blockDim.x;
-    int offsety = gridDim.y * blockDim.y;
-    
-    for(int i = idx; i &amp;lt; n; i += offsetx)
-    {        
-        for(int j = idy; j &amp;lt; n; j += offsety)
-        {
-            dev_identity[i * n + j] /= dev_matrix[i * n + i];
-        }
+__global__ void devide_identity(double* matrix, double* identity, int n) {
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  int idy = blockIdx.y * blockDim.y + threadIdx.y;
+  int offsetx = gridDim.x * blockDim.x;
+  int offsety = gridDim.y * blockDim.y;
+
+  for (int i = idx; i &amp;lt; n; i += offsetx) {
+    for (int j = idy; j &amp;lt; n; j += offsety) {
+      identity[i * n + j] /= matrix[i * n + i];
     }
+  }
 }
 
-__global__ void devide_matrix(double *dev_matrix, int n)
-{
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    int offsetx = gridDim.x * blockDim.x;
-    for(int i = idx; i &amp;lt; n; i += offsetx)
-    {
-        dev_matrix[i * n + i] = 1.0;
-    }
+__global__ void devide_matrix(double* matrix, int n) {
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  int offsetx = gridDim.x * blockDim.x;
+  for (int i = idx; i &amp;lt; n; i += offsetx) {
+    matrix[i * n + i] = 1.0;
+  }
 }
 
 // Обнуление элементов под ведущим элементом в строке x
-__global__ void subtract_below(double *dev_matrix, double *dev_identity, int n, int x)
-{
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    int idy = blockIdx.y * blockDim.y + threadIdx.y;
-    int offsetx = gridDim.x * blockDim.x;
-    int offsety = gridDim.y * blockDim.y;
-    
-    double coeff;
-    for(int i = x + 1 + idx; i &amp;lt; n; i += offsetx)
-    {
-        coeff = dev_matrix[i * n + x] / dev_matrix[x * n + x];
-        for(int j = x + 1 + idy; j &amp;lt; n; j += offsety)
-        {
-            dev_matrix[i * n + j] -= coeff * dev_matrix[x * n + j];
-        }
-        for(int j = idy; j &amp;lt; n; j += offsety)
-        {
-            dev_identity[i * n + j] -= coeff * dev_identity[x * n + j];
-        }
+__global__ void subtract_below(double* matrix, double* identity, int n, int x) {
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  int idy = blockIdx.y * blockDim.y + threadIdx.y;
+  int offsetx = gridDim.x * blockDim.x;
+  int offsety = gridDim.y * blockDim.y;
+
+  int i, j;
+  double coeff;
+  for (i = x + 1 + idx; i &amp;lt; n; i += offsetx) {
+    coeff = matrix[i * n + x] / matrix[x * n + x];
+    for (j = x + 1 + idy; j &amp;lt; n; j += offsety) {
+      matrix[i * n + j] -= coeff * matrix[x * n + j];
     }
+    for (j = idy; j &amp;lt; n; j += offsety) {
+      identity[i * n + j] -= coeff * identity[x * n + j];
+    }
+  }
 }
 
-__global__ void nullify_below(double *dev_matrix, int n, int x)
-{
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    int offsetx = gridDim.x * blockDim.x;
-    for(int i = x + 1 + idx; i &amp;lt; n; i += offsetx)
-    {
-        dev_matrix[i * n + x] = 0.0;
-    }
+__global__ void nullify_below(double* matrix, int n, int x) {
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  int offsetx = gridDim.x * blockDim.x;
+  for (int i = x + 1 + idx; i &amp;lt; n; i += offsetx) {
+    matrix[i * n + x] = 0.0;
+  }
 }
 
 // Обнуление элементов над ведущим элементом в строке x
-__global__ void subtract_above(double *dev_matrix, double *dev_identity, int n, int x)
-{
-    int idx = threadIdx.x + blockIdx.x * blockDim.x;
-    int idy = threadIdx.y + blockIdx.y * blockDim.y;
-    int offsetx = gridDim.x * blockDim.x;
-    int offsety = gridDim.y * blockDim.y;
-    
-    double coeff;
-    for(int i = x - 1 - idx; i &amp;gt;= 0; i -= offsetx)
-    {
-        coeff = dev_matrix[i * n + x] / dev_matrix[x * n + x];
-        for(int j = x - 1 - idy; j &amp;gt;= 0; j -= offsety)
-        {
-            dev_matrix[i * n + j] -= coeff * dev_matrix[x * n + j];
-        }
-        for(int j = idy; j &amp;lt; n; j += offsety)
-        {
-            dev_identity[i * n + j] -= coeff * dev_identity[x * n + j];
-        }
+__global__ void subtract_above(double* matrix, double* identity, int n, int x) {
+  int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  int idy = threadIdx.y + blockIdx.y * blockDim.y;
+  int offsetx = gridDim.x * blockDim.x;
+  int offsety = gridDim.y * blockDim.y;
+
+  int i, j;
+  double coeff;
+  for (i = x - 1 - idx; i &amp;gt;= 0; i -= offsetx) {
+    coeff = matrix[i * n + x] / matrix[x * n + x];
+    for (j = x - 1 - idy; j &amp;gt;= 0; j -= offsety) {
+      matrix[i * n + j] -= coeff * matrix[x * n + j];
     }
+    for (j = idy; j &amp;lt; n; j += offsety) {
+      identity[i * n + j] -= coeff * identity[x * n + j];
+    }
+  }
 }
 
-__global__ void nullify_above(double *dev_matrix, int n, int x)
-{
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    int offsetx = gridDim.x * blockDim.x;
-    for(int i = x - idx - 1; i &amp;gt;= 0; i -= offsetx)
-    {
-        dev_matrix[i * n + x] = 0.0;
-    }
+__global__ void nullify_above(double* matrix, int n, int x) {
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  int offsetx = gridDim.x * blockDim.x;
+  for (int i = x - idx - 1; i &amp;gt;= 0; i -= offsetx) {
+    matrix[i * n + x] = 0.0;
+  }
 }
 
 // Обращение матрицы методом Гаусса-Жордана
-void inverse_gpu(double *matrix, double *identity, int n)
-{
-    // Максимум 1048576 блоков и 1024 потока в блоке
+void inverse_gpu(double* matrix, double* identity, int n) {
+  dim3 BLOCKS_1D(16);
+  dim3 THREADS_1D(32);
+  dim3 BLOCKS_2D(16, 16);
+  dim3 THREADS_2D(32, 32);
 
-    dim3 THREADS_1D(1024);
-    dim3 BLOCKS_1D( ceil(n/float(THREADS_1D.x)) );
+  double* dev_matrix;
+  double* dev_identity;
+  cudaMalloc(&amp;amp;dev_matrix, sizeof(double) * n * n);
+  cudaMalloc(&amp;amp;dev_identity, sizeof(double) * n * n);
+  cudaMemcpy(dev_matrix, matrix, sizeof(double) * n * n,
+             cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_identity, identity, sizeof(double) * n * n,
+             cudaMemcpyHostToDevice);
 
-    dim3 THREADS_2D(1, 1024);
-    dim3 BLOCKS_2D(
-        min(1024.0, ceil(n/float(THREADS_2D.x))),
-        min(1024.0, ceil(n/float(THREADS_2D.y)))
-    );
-    
-    dim3 THREADS_2D_EQUAL(32, 32);
-    dim3 BLOCKS_2D_EQUAL(
-        min(1024.0, ceil(n/float(THREADS_2D_EQUAL.x))),
-        min(1024.0, ceil(n/float(THREADS_2D_EQUAL.y)))
-    );
+  cudaEvent_t start, stop;
 
-    double *dev_matrix;
-    double *dev_identity;
-    cudaMalloc(&amp;amp;dev_matrix, sizeof(double) * n * n);
-    cudaMalloc(&amp;amp;dev_identity, sizeof(double) * n * n);
-    cudaMemcpy(dev_matrix, matrix, sizeof(double) * n * n, cudaMemcpyHostToDevice);
-    cudaMemcpy(dev_identity, identity, sizeof(double) * n * n, cudaMemcpyHostToDevice);
-    
-    cudaEvent_t start, stop;
-    
-    if(DEBUG &amp;amp;&amp;amp; DEBUG_TIMER)
-    {
-        cudaEventCreate(&amp;amp;start);
-        cudaEventCreate(&amp;amp;stop);
-        cudaEventRecord(start, 0);
-    }
-    
-    // Прямой ход
-    for(int i = 0; i &amp;lt; n; i++)
-    {
-        // Обменять строку со строкой с наибольшим ведущим элементом и обнулить элементы под ним
-        max_in_column&amp;lt;&amp;lt;&amp;lt;1, 1&amp;gt;&amp;gt;&amp;gt;(dev_matrix, n, i);
-        swap_lines&amp;lt;&amp;lt;&amp;lt;BLOCKS_1D, THREADS_1D&amp;gt;&amp;gt;&amp;gt;(dev_matrix, dev_identity, n, i);
-        subtract_below&amp;lt;&amp;lt;&amp;lt;BLOCKS_2D, THREADS_2D&amp;gt;&amp;gt;&amp;gt;(dev_matrix, dev_identity, n, i);
-        nullify_below&amp;lt;&amp;lt;&amp;lt;BLOCKS_1D, THREADS_1D&amp;gt;&amp;gt;&amp;gt;(dev_matrix, n, i);
-    }
+  if (DEBUG &amp;amp;&amp;amp; DEBUG_TIMER) {
+    cudaEventCreate(&amp;amp;start);
+    cudaEventCreate(&amp;amp;stop);
+    cudaEventRecord(start, 0);
+  }
 
-    // Обратный ход
-    for(int i = n - 1; i &amp;gt;= 0; i--)
-    {
-        // Обнулить элементы выше ведущего
-        subtract_above&amp;lt;&amp;lt;&amp;lt;BLOCKS_2D, THREADS_2D&amp;gt;&amp;gt;&amp;gt;(dev_matrix, dev_identity, n, i);
-        nullify_above&amp;lt;&amp;lt;&amp;lt;BLOCKS_1D, THREADS_1D&amp;gt;&amp;gt;&amp;gt;(dev_matrix, n, i);
-    }
-    
-    // Разделить строки на их ведущие элементы
-    devide_identity&amp;lt;&amp;lt;&amp;lt;BLOCKS_2D_EQUAL, THREADS_2D_EQUAL&amp;gt;&amp;gt;&amp;gt;(dev_matrix, dev_identity, n);
-    devide_matrix&amp;lt;&amp;lt;&amp;lt;BLOCKS_1D, THREADS_1D&amp;gt;&amp;gt;&amp;gt;(dev_matrix, n);
-    
-    if(DEBUG &amp;amp;&amp;amp; DEBUG_TIMER)
-    {
-        cudaGetLastError();
-        cudaEventRecord(stop, 0);
-        cudaEventSynchronize(stop);
-        float t;
-        cudaEventElapsedTime(&amp;amp;t, start, stop);
-        cout &amp;lt;&amp;lt; &amp;quot;time: &amp;quot; &amp;lt;&amp;lt; t &amp;lt;&amp;lt; endl &amp;lt;&amp;lt; endl;
-        cudaEventDestroy(start);
-        cudaEventDestroy(stop);
-    }
-    
-    cudaMemcpy(matrix, dev_matrix, sizeof(double) * n * n, cudaMemcpyDeviceToHost);
-    cudaMemcpy(identity, dev_identity, sizeof(double) * n * n, cudaMemcpyDeviceToHost);
-    cudaFree(dev_matrix);
-    cudaFree(dev_identity);
+  // Прямой ход
+  for (int i = 0; i &amp;lt; n; i++) {
+    // Обменять строку со строкой с наибольшим ведущим элементом и обнулить
+    // элементы под ним
+    max_in_column&amp;lt;&amp;lt;&amp;lt;1, 1&amp;gt;&amp;gt;&amp;gt;(dev_matrix, n, i);
+    swap_lines&amp;lt;&amp;lt;&amp;lt;BLOCKS_1D, THREADS_1D&amp;gt;&amp;gt;&amp;gt;(dev_matrix, dev_identity, n, i);
+    subtract_below&amp;lt;&amp;lt;&amp;lt;BLOCKS_2D, THREADS_2D&amp;gt;&amp;gt;&amp;gt;(dev_matrix, dev_identity, n, i);
+    nullify_below&amp;lt;&amp;lt;&amp;lt;BLOCKS_1D, THREADS_1D&amp;gt;&amp;gt;&amp;gt;(dev_matrix, n, i);
+  }
+
+  // Обратный ход
+  for (int i = n - 1; i &amp;gt;= 0; i--) {
+    // Обнулить элементы выше ведущего
+    subtract_above&amp;lt;&amp;lt;&amp;lt;BLOCKS_2D, THREADS_2D&amp;gt;&amp;gt;&amp;gt;(dev_matrix, dev_identity, n, i);
+    nullify_above&amp;lt;&amp;lt;&amp;lt;BLOCKS_1D, THREADS_1D&amp;gt;&amp;gt;&amp;gt;(dev_matrix, n, i);
+  }
+
+  // Разделить строки на их ведущие элементы
+  devide_identity&amp;lt;&amp;lt;&amp;lt;BLOCKS_2D, THREADS_2D&amp;gt;&amp;gt;&amp;gt;(dev_matrix, dev_identity, n);
+  devide_matrix&amp;lt;&amp;lt;&amp;lt;BLOCKS_1D, THREADS_1D&amp;gt;&amp;gt;&amp;gt;(dev_matrix, n);
+
+  if (DEBUG &amp;amp;&amp;amp; DEBUG_TIMER) {
+    cudaGetLastError();
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+    float t;
+    cudaEventElapsedTime(&amp;amp;t, start, stop);
+    cout &amp;lt;&amp;lt; t &amp;lt;&amp;lt; endl;
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+  }
+
+  cudaMemcpy(matrix, dev_matrix, sizeof(double) * n * n,
+             cudaMemcpyDeviceToHost);
+  cudaMemcpy(identity, dev_identity, sizeof(double) * n * n,
+             cudaMemcpyDeviceToHost);
+  cudaFree(dev_matrix);
+  cudaFree(dev_identity);
 }
 
-int main()
-{
-    int n;
-    cin &amp;gt;&amp;gt; n;
+int main() {
+  int n;
+  cin &amp;gt;&amp;gt; n;
 
-    double *matrix = new double[n * n];
-    double *identity = new double[n * n];
+  double* matrix = new double[n * n];
+  double* identity = new double[n * n];
 
-    for(int i = 0; i &amp;lt; n; i++)
-    {
-        for(int j = 0; j &amp;lt; n; j++)
-        {
-            cin &amp;gt;&amp;gt; matrix[i * n + j];
-        }
+  for (int i = 0; i &amp;lt; n; i++) {
+    for (int j = 0; j &amp;lt; n; j++) {
+      cin &amp;gt;&amp;gt; matrix[i * n + j];
     }
+  }
 
-    for(int i = 0; i &amp;lt; n; i++)
-    {
-        for(int j = 0; j &amp;lt; n; j++)
-        {
-            identity[i * n + j] = i == j ? 1.0 : 0.0;
-        }
+  for (int i = 0; i &amp;lt; n; i++) {
+    for (int j = 0; j &amp;lt; n; j++) {
+      identity[i * n + j] = i == j ? 1.0 : 0.0;
     }
-    
-    if(DEBUG &amp;amp;&amp;amp; DEBUG_MATRIX)
-    {
-        cout &amp;lt;&amp;lt; &amp;quot;Before:&amp;quot; &amp;lt;&amp;lt; endl;
-        print_both(matrix, identity, n);
-        cout &amp;lt;&amp;lt; endl;
-    }
-    
+  }
 
-    inverse_gpu(matrix, identity, n);
+  if (DEBUG &amp;amp;&amp;amp; DEBUG_MATRIX) {
+    cout &amp;lt;&amp;lt; &amp;quot;Before:&amp;quot; &amp;lt;&amp;lt; endl;
+    print_both(matrix, identity, n);
+    cout &amp;lt;&amp;lt; endl;
+  }
 
-    if(DEBUG &amp;amp;&amp;amp; DEBUG_MATRIX)
-    {
-        cout &amp;lt;&amp;lt; &amp;quot;After:&amp;quot; &amp;lt;&amp;lt; endl;
-        print_both(matrix, identity, n);
-        cout &amp;lt;&amp;lt; endl;
-    }
-    
-    if(!DEBUG)
-    {
-        // Вывести обратную матрицу
-        print(identity, n);
-    }
+  inverse_gpu(matrix, identity, n);
 
-    delete[] matrix;
-    delete[] identity;
+  if (DEBUG &amp;amp;&amp;amp; DEBUG_MATRIX) {
+    cout &amp;lt;&amp;lt; &amp;quot;After:&amp;quot; &amp;lt;&amp;lt; endl;
+    print_both(matrix, identity, n);
+    cout &amp;lt;&amp;lt; endl;
+  }
 
-    return 0;
+  if (!DEBUG) {
+    // Вывести обратную матрицу
+    print(identity, n);
+  }
+
+  delete[] matrix;
+  delete[] identity;
+
+  return 0;
 }
 &lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Подход к параллельным вычислениям предлагаемый Nvidia довольно прост: давайте ускорим циклы с однотипными действиями.&lt;/p&gt;
+
+&lt;p&gt;Стоит отметить, что &lt;strong&gt;основная сложность&lt;/strong&gt; при написании программ на CUDA — выделение тех частей алгоритма, которые можно распараллелить.&lt;/p&gt;
+
+&lt;p&gt;Было бы очень интересно найти применение CUDA в реальном проекте.&lt;/p&gt;
 </description>
     </item>
     
