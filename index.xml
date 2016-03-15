@@ -7,26 +7,16 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>ru-RU</language>
     <copyright>Иван Виноградов</copyright>
-    <lastBuildDate>Sun, 13 Mar 2016 05:50:03 +0300</lastBuildDate>
+    <lastBuildDate>Fri, 11 Mar 2016 06:09:32 +0300</lastBuildDate>
     <atom:link href="https://winogradoff.github.io/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
-      <title>Nvidia CUDA. Сортировка</title>
-      <link>https://winogradoff.github.io/post/2016/03/13/cuda-sorting/</link>
-      <pubDate>Sun, 13 Mar 2016 05:50:03 +0300</pubDate>
-      
-      <guid>https://winogradoff.github.io/post/2016/03/13/cuda-sorting/</guid>
-      <description>&lt;p&gt;Начинается что-то интересное&amp;hellip;&lt;/p&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>Nvidia CUDA. Выделение границ с помощью перекрёстного оператора Робертса</title>
+      <title>Nvidia CUDA. Фильтрация изображений. Оператор Робертса</title>
       <link>https://winogradoff.github.io/post/2016/03/11/cuda-filtration/</link>
       <pubDate>Fri, 11 Mar 2016 06:09:32 +0300</pubDate>
       
       <guid>https://winogradoff.github.io/post/2016/03/11/cuda-filtration/</guid>
-      <description>&lt;p&gt;&lt;em&gt;Из &lt;a href=&#34;https://ru.wikipedia.org/wiki/%D0%9F%D0%B5%D1%80%D0%B5%D0%BA%D1%80%D1%91%D1%81%D1%82%D0%BD%D1%8B%D0%B9_%D0%BE%D0%BF%D0%B5%D1%80%D0%B0%D1%82%D0%BE%D1%80_%D0%A0%D0%BE%D0%B1%D0%B5%D1%80%D1%82%D1%81%D0%B0&#34;&gt;статьи на Википедии&lt;/a&gt;:&lt;/em&gt;&lt;/p&gt;
+      <description>&lt;p&gt;&lt;em&gt;Из &lt;a href=&#34;https://ru.wikipedia.org/wiki/%D0%9F%D0%B5%D1%80%D0%B5%D0%BA%D1%80%D1%91%D1%81%D1%82%D0%BD%D1%8B%D0%B9_%D0%BE%D0%BF%D0%B5%D1%80%D0%B0%D1%82%D0%BE%D1%80_%D0%A0%D0%BE%D0%B1%D0%B5%D1%80%D1%82%D1%81%D0%B0&#34; title=&#34;&#34; target=&#34;_blank&#34;&gt;статьи на Википедии&lt;/a&gt;:&lt;/em&gt;&lt;/p&gt;
 
 &lt;p&gt;В компьютерном зрении перекрёстный оператор Робертса — один из ранних алгоритмов выделения границ, который вычисляет сумму квадратов разниц между диагонально смежными пикселами. Это может быть выполнено сверткой изображения с двумя ядрами:&lt;/p&gt;
 
@@ -38,7 +28,7 @@
 
 &lt;pre&gt;&lt;code&gt;a = input_image(x, y) - input_image(x + 1, y + 1)
 b = input_image(x + 1,y) - input_image(x, y + 1)
-output_image(x, y) = Sqrt(a^2 + b^2)
+output_image(x, y) = sqrt(a^2 + b^2)
 &lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Что это всё значит разберём чуть позже, а пока давайте взглянем на работу фильтра:&lt;/p&gt;
@@ -226,7 +216,7 @@ int main() {
     </item>
     
     <item>
-      <title>Nvidia CUDA. Поиск обратной матрицы</title>
+      <title>Nvidia CUDA. Поиск обратной матрицы. Метод Гаусса-Жордана</title>
       <link>https://winogradoff.github.io/post/2016/03/03/cuda-inverse-matrix/</link>
       <pubDate>Thu, 03 Mar 2016 21:36:33 +0300</pubDate>
       
@@ -793,7 +783,7 @@ int main() {
       <guid>https://winogradoff.github.io/post/2016/02/22/hello/</guid>
       <description>
 
-&lt;p&gt;Решил я развернуть свой блог на новом движке &lt;a href=&#34;https://gohugo.io/&#34; title=&#34;Что за Hugo?&#34; target=&#34;_blank&#34;&gt;Hugo&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Решил развернуть блог на новом движке &lt;a href=&#34;https://gohugo.io/&#34; title=&#34;Что за Hugo?&#34; target=&#34;_blank&#34;&gt;Hugo&lt;/a&gt;.&lt;/p&gt;
 
 &lt;p&gt;Создатель Hugo обещает, что мы создадим сайт &lt;a href=&#34;https://gohugo.io/overview/quickstart/&#34;&gt;за 2 минуты&lt;/a&gt;, что являтся большим плюсом для новичков.&lt;/p&gt;
 
@@ -807,12 +797,11 @@ int main() {
 &lt;li&gt;изменил структуру шаблонов&lt;/li&gt;
 &lt;li&gt;изменил формат вывода дат&lt;/li&gt;
 &lt;li&gt;добавил иконку ВКонтакте в шапку сайта (иконки — символы шрифта &lt;a href=&#34;https://fortawesome.github.io/Font-Awesome/&#34; title=&#34;&#34; target=&#34;_blank&#34;&gt;Font Awesome&lt;/a&gt;)&lt;/li&gt;
-&lt;li&gt;убрал подвал сайта (мне кажется он лишним)&lt;/li&gt;
-&lt;li&gt;отключил Disqus (систему комментариев) и Google Analytics.&lt;/li&gt;
-&lt;li&gt;подключил &lt;a href=&#34;https://vk.com/dev/Comments&#34; title=&#34;&#34; target=&#34;_blank&#34;&gt;виджет для комментариев ВКонтакте&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;отключил встроенные Disqus и Google Analytics.&lt;/li&gt;
+&lt;li&gt;подключил &lt;a href=&#34;https://metrika.yandex.ru&#34; title=&#34;&#34; target=&#34;_blank&#34;&gt;Яндекс.Метрику&lt;/a&gt; и &lt;a href=&#34;https://vk.com/dev/Comments&#34; title=&#34;&#34; target=&#34;_blank&#34;&gt;виджет комментариев ВКонтакте&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
-&lt;p&gt;Пока это всё. Планирую постить сюда какие-то находки и соображения по своим проектам.
+&lt;p&gt;Пока всё. Планирую размещать здесь какие-то находки и соображения по проектам.
 В ближайших планах заполнить страницу &lt;a href=&#34;https://winogradoff.github.io/page/about/&#34;&gt;Об авторе&lt;/a&gt;.&lt;/p&gt;
 </description>
     </item>
