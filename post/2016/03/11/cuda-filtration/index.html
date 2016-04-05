@@ -113,12 +113,14 @@
         <div class="post-content clearfix" itemprop="articleBody">
     
 
-    <p><em>Из <a href="https://ru.wikipedia.org/wiki/%D0%9F%D0%B5%D1%80%D0%B5%D0%BA%D1%80%D1%91%D1%81%D1%82%D0%BD%D1%8B%D0%B9_%D0%BE%D0%BF%D0%B5%D1%80%D0%B0%D1%82%D0%BE%D1%80_%D0%A0%D0%BE%D0%B1%D0%B5%D1%80%D1%82%D1%81%D0%B0" title="" target="_blank">статьи на Википедии</a>:</em></p>
+    
+
+<p><em>Из <a href="https://ru.wikipedia.org/wiki/%D0%9F%D0%B5%D1%80%D0%B5%D0%BA%D1%80%D1%91%D1%81%D1%82%D0%BD%D1%8B%D0%B9_%D0%BE%D0%BF%D0%B5%D1%80%D0%B0%D1%82%D0%BE%D1%80_%D0%A0%D0%BE%D0%B1%D0%B5%D1%80%D1%82%D1%81%D0%B0" title="" target="_blank">статьи на Википедии</a>:</em></p>
 
 <p>В компьютерном зрении перекрёстный оператор Робертса — один из ранних алгоритмов выделения границ, который вычисляет сумму квадратов разниц между диагонально смежными пикселами. Это может быть выполнено сверткой изображения с двумя ядрами:</p>
 
 <p style="text-align: center">
-<img src="/img/cuda-roberts-cross-operator/wiki_1.png" title="/img/cuda-roberts-cross-operator/wiki_1.png" />
+<img src="/img/cuda-roberts-cross-operator/wiki_1.png" title="" />
 </p>
 
 <p>Иными словами, каждый пиксель получаемого изображения вычисляется по правилу:</p>
@@ -142,7 +144,199 @@ output_image(x, y) = sqrt(a^2 + b^2)
 
 <p><img src="/img/cuda-roberts-cross-operator/example_3_after.jpg" alt="После фильтрации с помощью перекрёстного оператора Робертса" /></p>
 
-<p>Код алгоритма на CUDA:</p>
+<h1 id="описание-программы:6225e02feb7ed91db306400db8550870">Описание программы</h1>
+
+<p>Изображение является двоичным файлом со следующей структурой:</p>
+
+<p><img src="/img/cuda-roberts-cross-operator/image_format.png" alt="Формат входного файла" /></p>
+
+<p>Входное и выходное изображения храняться в массивах:</p>
+
+<pre><code class="language-cpp">int *input = new int[w * h];
+int *output = new int[w * h];
+</code></pre>
+
+<p>Так как четыре компоненты цвета храняться в одном int, то для работы с ними на GPU используется распаковка и запаковка их обратно с помощью сдвигов (подсмотрено в примерах CUDA):</p>
+
+<pre><code class="language-cpp">__device__ int pack(int4 rgba)
+{
+    return (rgba.w &lt;&lt; 24) | (rgba.z &lt;&lt; 16) | (rgba.y &lt;&lt; 8) | rgba.x;
+}
+__device__ int4 unpack(int c)
+{
+  int4 rgba;
+  rgba.x = c &amp; 0xff;
+  rgba.y = (c&gt;&gt;8) &amp; 0xff;
+  rgba.z = (c&gt;&gt;16) &amp; 0xff;
+  rgba.w = (c&gt;&gt;24) &amp; 0xff;
+  return rgba;
+}
+</code></pre>
+
+<p>Яркость находится из формул конверсии RGB -&gt; YUV:</p>
+
+<pre><code>Y = 0.299 * R + 0.587 * G + 0.114 * B;
+U = -0.14713 * R - 0.28886 * G + 0.436 * B + 128;
+V = 0.615 * R - 0.51499 * G - 0.10001 * B + 128;
+</code></pre>
+
+<p>здесь Y — яркостная составляющая, U и V — цветоразностные составляющие.</p>
+
+<p>В итоге для яркости:</p>
+
+<pre><code class="language-cpp">__device__ double intensity(int4 rgba)
+{
+    return 0.299 * rgba.x + 0.587 * rgba.y + 0.114 * rgba.z;
+}
+</code></pre>
+
+<p>Для каждого пикселя нового изображения (матрицы w* h) считается новое значение цвета по формуле для перекрёстного оператора Робертса:</p>
+
+<pre><code class="language-cpp">double m = intensity(unpack(get_element(dev_input, w, h, i, j)));
+double br = intensity(unpack(get_element(dev_input, w, h, i + 1, j + 1)));
+double r = intensity(unpack(get_element(dev_input, w, h, i, j + 1)));
+double b = intensity(unpack(get_element(dev_input, w, h, i + 1, j)));
+double tmp1 = m - br;
+double tmp2 = r - b;
+int gradient = (int) sqrt(tmp1 * tmp1 + tmp2 * tmp2);
+// Нормировка
+if(gradient &gt; 255) gradient = 255;
+// Записываем интенсивность в RGB
+dev_output[i * w + j] = pack(make_int4(gradient, gradient, gradient, 0));
+</code></pre>
+
+<p>Работа программы была проверена на различных сетках (количество блоков и потоков).
+Для построения графиков использовался Python + matplotlib.</p>
+
+<pre><code class="language-python">import os
+from os.path import basename, splitext
+from numpy import linspace, array
+import matplotlib
+import matplotlib.pyplot as plt
+from scipy.interpolate import interp1d
+from multiprocessing import Pool
+
+# Настройка шрифтов
+matplotlib.rc('font', family='Tahoma', size=16)
+matplotlib.rc('axes', titlesize=22)
+matplotlib.rc('axes', labelsize=18)
+matplotlib.rc('legend', fontsize=16)
+matplotlib.rc('xtick', labelsize=12)
+matplotlib.rc('ytick', labelsize=12)
+
+
+# Время выполнения для теста &lt;size&gt; для программы &lt;program_name&gt;
+def calculate_time(params):
+    program_name = params['program_name']
+    size = params['size']
+    in_name = 'in{}.data'.format(size)
+    if not os.path.isfile(in_name):
+        return None
+    out_name = 'out{}.data'.format(size)
+    output = os.popen('echo {} {} | {}'.format(in_name, out_name, program_name)).read()
+    output = float(output)
+    print('Программа {}, тест {}, время {} мс'.format(program_name, in_name, output))
+    return {'size': size, 'time': output}
+
+
+# Расчёт времени выполнения для сеток от 1x1 до 3000x3000 для существующих тестов
+def run_test_for_program(program_name):
+    params = [{'program_name': program_name, 'size': n} for n in range(3000 + 1)]
+    result = Pool(4).map(calculate_time, params)
+    result = [x for x in result if x is not None]
+    x = array([float(x['size']) for x in result])
+    y = array([x['time'] for x in result])
+    return x, y
+
+
+# Данные измерений
+def get_functions():
+    return [
+        {
+            'label': 'блоки: 8x8, потоки: 16x16',
+            'color': 'red',
+            'data': run_test_for_program('lab2_8x8_16x16.exe')
+        },
+        {
+            'label': 'блоки: 16x16, потоки: 16x16',
+            'color': 'green',
+            'data': run_test_for_program('lab2_16x16_16x16.exe')
+        },
+        {
+            'label': 'блоки: 32x32, потоки: 16x16',
+            'color': 'blue',
+            'data': run_test_for_program('lab2_32x32_16x16.exe')
+        },
+        {
+            'label': 'блоки: 8x8, потоки: 32x32',
+            'color': 'purple',
+            'data': run_test_for_program('lab2_8x8_32x32.exe')
+        },
+        {
+            'label': 'блоки: 16x16, потоки: 32x32',
+            'color': 'orange',
+            'data': run_test_for_program('lab2_16x16_32x32.exe')
+        },
+        {
+            'label': 'блоки: 32x32, потоки: 32x32',
+            'color': 'pink',
+            'data': run_test_for_program('lab2_32x32_32x32.exe')
+        }
+    ]
+
+
+# Функция апроксимации
+def fit_quadratic_function(x, a, b, c):
+    return a * x ** 2 + b * x + c
+
+
+def main():
+    plt.figure(figsize=(22, 11), dpi=80)
+
+    x_min, x_max = None, None
+    y_min, y_max = None, None
+
+    for f in get_functions():
+        label = f['label']
+        color = f['color']
+        x, y = f['data']
+
+        if not all([x_min, x_max, y_min, y_max]):
+            x_min, x_max = x.min(), x.max()
+            y_min, y_max = y.min(), y.max()
+        else:
+            x_min, x_max = min(x_min, x.min()), max(x_max, x.max())
+            y_min, y_max = min(y_min, y.min()), max(y_max, y.max())
+
+        x_new = linspace(x.min(), x.max(), 100)
+        f = interp1d(x, y, kind='cubic')
+        plt.plot(x, y, marker='o', linestyle='', color=color)
+        plt.plot(x_new, f(x_new), linestyle='-', color=color, label=label)
+
+    # Внешний вид
+    plt.xlim([x_min, x_max])
+    plt.ylim([y_min, y_max])
+    plt.xlabel('Размер матрицы')
+    plt.ylabel('Время выполнения, мс')
+    plt.legend(loc='best')
+    plt.grid(True)
+
+    # Сохранить в PNG и показать
+    file_name, file_extension = splitext(__file__)
+    plt.savefig('{:s}.png'.format(basename(file_name)))
+    plt.show()
+
+
+if __name__ == &quot;__main__&quot;:
+    main()
+
+</code></pre>
+
+<p>Графики производительности для разных сеток:</p>
+
+<p><img src="/img/cuda-roberts-cross-operator/plots.png" alt="Сравнение производительности для разных сеток" /></p>
+
+<p>Полный код программы (CUDA C++):</p>
 
 <pre><code class="language-cpp">#include &lt;iostream&gt;
 #include &lt;fstream&gt;
@@ -307,8 +501,6 @@ int main() {
   return 0;
 }
 </code></pre>
-
-<p>Продолжение следует&hellip;</p>
 
 </div>
 

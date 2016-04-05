@@ -16,12 +16,14 @@
       <pubDate>Fri, 11 Mar 2016 06:09:32 +0300</pubDate>
       
       <guid>https://winogradoff.github.io/post/2016/03/11/cuda-filtration/</guid>
-      <description>&lt;p&gt;&lt;em&gt;Из &lt;a href=&#34;https://ru.wikipedia.org/wiki/%D0%9F%D0%B5%D1%80%D0%B5%D0%BA%D1%80%D1%91%D1%81%D1%82%D0%BD%D1%8B%D0%B9_%D0%BE%D0%BF%D0%B5%D1%80%D0%B0%D1%82%D0%BE%D1%80_%D0%A0%D0%BE%D0%B1%D0%B5%D1%80%D1%82%D1%81%D0%B0&#34; title=&#34;&#34; target=&#34;_blank&#34;&gt;статьи на Википедии&lt;/a&gt;:&lt;/em&gt;&lt;/p&gt;
+      <description>
+
+&lt;p&gt;&lt;em&gt;Из &lt;a href=&#34;https://ru.wikipedia.org/wiki/%D0%9F%D0%B5%D1%80%D0%B5%D0%BA%D1%80%D1%91%D1%81%D1%82%D0%BD%D1%8B%D0%B9_%D0%BE%D0%BF%D0%B5%D1%80%D0%B0%D1%82%D0%BE%D1%80_%D0%A0%D0%BE%D0%B1%D0%B5%D1%80%D1%82%D1%81%D0%B0&#34; title=&#34;&#34; target=&#34;_blank&#34;&gt;статьи на Википедии&lt;/a&gt;:&lt;/em&gt;&lt;/p&gt;
 
 &lt;p&gt;В компьютерном зрении перекрёстный оператор Робертса — один из ранних алгоритмов выделения границ, который вычисляет сумму квадратов разниц между диагонально смежными пикселами. Это может быть выполнено сверткой изображения с двумя ядрами:&lt;/p&gt;
 
 &lt;p style=&#34;text-align: center&#34;&gt;
-&lt;img src=&#34;https://winogradoff.github.io/img/cuda-roberts-cross-operator/wiki_1.png&#34; title=&#34;/img/cuda-roberts-cross-operator/wiki_1.png&#34; /&gt;
+&lt;img src=&#34;https://winogradoff.github.io/img/cuda-roberts-cross-operator/wiki_1.png&#34; title=&#34;&#34; /&gt;
 &lt;/p&gt;
 
 &lt;p&gt;Иными словами, каждый пиксель получаемого изображения вычисляется по правилу:&lt;/p&gt;
@@ -45,7 +47,199 @@ output_image(x, y) = sqrt(a^2 + b^2)
 
 &lt;p&gt;&lt;img src=&#34;https://winogradoff.github.io/img/cuda-roberts-cross-operator/example_3_after.jpg&#34; alt=&#34;После фильтрации с помощью перекрёстного оператора Робертса&#34; /&gt;&lt;/p&gt;
 
-&lt;p&gt;Код алгоритма на CUDA:&lt;/p&gt;
+&lt;h1 id=&#34;описание-программы:6225e02feb7ed91db306400db8550870&#34;&gt;Описание программы&lt;/h1&gt;
+
+&lt;p&gt;Изображение является двоичным файлом со следующей структурой:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://winogradoff.github.io/img/cuda-roberts-cross-operator/image_format.png&#34; alt=&#34;Формат входного файла&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Входное и выходное изображения храняться в массивах:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-cpp&#34;&gt;int *input = new int[w * h];
+int *output = new int[w * h];
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Так как четыре компоненты цвета храняться в одном int, то для работы с ними на GPU используется распаковка и запаковка их обратно с помощью сдвигов (подсмотрено в примерах CUDA):&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-cpp&#34;&gt;__device__ int pack(int4 rgba)
+{
+    return (rgba.w &amp;lt;&amp;lt; 24) | (rgba.z &amp;lt;&amp;lt; 16) | (rgba.y &amp;lt;&amp;lt; 8) | rgba.x;
+}
+__device__ int4 unpack(int c)
+{
+  int4 rgba;
+  rgba.x = c &amp;amp; 0xff;
+  rgba.y = (c&amp;gt;&amp;gt;8) &amp;amp; 0xff;
+  rgba.z = (c&amp;gt;&amp;gt;16) &amp;amp; 0xff;
+  rgba.w = (c&amp;gt;&amp;gt;24) &amp;amp; 0xff;
+  return rgba;
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Яркость находится из формул конверсии RGB -&amp;gt; YUV:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Y = 0.299 * R + 0.587 * G + 0.114 * B;
+U = -0.14713 * R - 0.28886 * G + 0.436 * B + 128;
+V = 0.615 * R - 0.51499 * G - 0.10001 * B + 128;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;здесь Y — яркостная составляющая, U и V — цветоразностные составляющие.&lt;/p&gt;
+
+&lt;p&gt;В итоге для яркости:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-cpp&#34;&gt;__device__ double intensity(int4 rgba)
+{
+    return 0.299 * rgba.x + 0.587 * rgba.y + 0.114 * rgba.z;
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Для каждого пикселя нового изображения (матрицы w* h) считается новое значение цвета по формуле для перекрёстного оператора Робертса:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-cpp&#34;&gt;double m = intensity(unpack(get_element(dev_input, w, h, i, j)));
+double br = intensity(unpack(get_element(dev_input, w, h, i + 1, j + 1)));
+double r = intensity(unpack(get_element(dev_input, w, h, i, j + 1)));
+double b = intensity(unpack(get_element(dev_input, w, h, i + 1, j)));
+double tmp1 = m - br;
+double tmp2 = r - b;
+int gradient = (int) sqrt(tmp1 * tmp1 + tmp2 * tmp2);
+// Нормировка
+if(gradient &amp;gt; 255) gradient = 255;
+// Записываем интенсивность в RGB
+dev_output[i * w + j] = pack(make_int4(gradient, gradient, gradient, 0));
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Работа программы была проверена на различных сетках (количество блоков и потоков).
+Для построения графиков использовался Python + matplotlib.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;import os
+from os.path import basename, splitext
+from numpy import linspace, array
+import matplotlib
+import matplotlib.pyplot as plt
+from scipy.interpolate import interp1d
+from multiprocessing import Pool
+
+# Настройка шрифтов
+matplotlib.rc(&#39;font&#39;, family=&#39;Tahoma&#39;, size=16)
+matplotlib.rc(&#39;axes&#39;, titlesize=22)
+matplotlib.rc(&#39;axes&#39;, labelsize=18)
+matplotlib.rc(&#39;legend&#39;, fontsize=16)
+matplotlib.rc(&#39;xtick&#39;, labelsize=12)
+matplotlib.rc(&#39;ytick&#39;, labelsize=12)
+
+
+# Время выполнения для теста &amp;lt;size&amp;gt; для программы &amp;lt;program_name&amp;gt;
+def calculate_time(params):
+    program_name = params[&#39;program_name&#39;]
+    size = params[&#39;size&#39;]
+    in_name = &#39;in{}.data&#39;.format(size)
+    if not os.path.isfile(in_name):
+        return None
+    out_name = &#39;out{}.data&#39;.format(size)
+    output = os.popen(&#39;echo {} {} | {}&#39;.format(in_name, out_name, program_name)).read()
+    output = float(output)
+    print(&#39;Программа {}, тест {}, время {} мс&#39;.format(program_name, in_name, output))
+    return {&#39;size&#39;: size, &#39;time&#39;: output}
+
+
+# Расчёт времени выполнения для сеток от 1x1 до 3000x3000 для существующих тестов
+def run_test_for_program(program_name):
+    params = [{&#39;program_name&#39;: program_name, &#39;size&#39;: n} for n in range(3000 + 1)]
+    result = Pool(4).map(calculate_time, params)
+    result = [x for x in result if x is not None]
+    x = array([float(x[&#39;size&#39;]) for x in result])
+    y = array([x[&#39;time&#39;] for x in result])
+    return x, y
+
+
+# Данные измерений
+def get_functions():
+    return [
+        {
+            &#39;label&#39;: &#39;блоки: 8x8, потоки: 16x16&#39;,
+            &#39;color&#39;: &#39;red&#39;,
+            &#39;data&#39;: run_test_for_program(&#39;lab2_8x8_16x16.exe&#39;)
+        },
+        {
+            &#39;label&#39;: &#39;блоки: 16x16, потоки: 16x16&#39;,
+            &#39;color&#39;: &#39;green&#39;,
+            &#39;data&#39;: run_test_for_program(&#39;lab2_16x16_16x16.exe&#39;)
+        },
+        {
+            &#39;label&#39;: &#39;блоки: 32x32, потоки: 16x16&#39;,
+            &#39;color&#39;: &#39;blue&#39;,
+            &#39;data&#39;: run_test_for_program(&#39;lab2_32x32_16x16.exe&#39;)
+        },
+        {
+            &#39;label&#39;: &#39;блоки: 8x8, потоки: 32x32&#39;,
+            &#39;color&#39;: &#39;purple&#39;,
+            &#39;data&#39;: run_test_for_program(&#39;lab2_8x8_32x32.exe&#39;)
+        },
+        {
+            &#39;label&#39;: &#39;блоки: 16x16, потоки: 32x32&#39;,
+            &#39;color&#39;: &#39;orange&#39;,
+            &#39;data&#39;: run_test_for_program(&#39;lab2_16x16_32x32.exe&#39;)
+        },
+        {
+            &#39;label&#39;: &#39;блоки: 32x32, потоки: 32x32&#39;,
+            &#39;color&#39;: &#39;pink&#39;,
+            &#39;data&#39;: run_test_for_program(&#39;lab2_32x32_32x32.exe&#39;)
+        }
+    ]
+
+
+# Функция апроксимации
+def fit_quadratic_function(x, a, b, c):
+    return a * x ** 2 + b * x + c
+
+
+def main():
+    plt.figure(figsize=(22, 11), dpi=80)
+
+    x_min, x_max = None, None
+    y_min, y_max = None, None
+
+    for f in get_functions():
+        label = f[&#39;label&#39;]
+        color = f[&#39;color&#39;]
+        x, y = f[&#39;data&#39;]
+
+        if not all([x_min, x_max, y_min, y_max]):
+            x_min, x_max = x.min(), x.max()
+            y_min, y_max = y.min(), y.max()
+        else:
+            x_min, x_max = min(x_min, x.min()), max(x_max, x.max())
+            y_min, y_max = min(y_min, y.min()), max(y_max, y.max())
+
+        x_new = linspace(x.min(), x.max(), 100)
+        f = interp1d(x, y, kind=&#39;cubic&#39;)
+        plt.plot(x, y, marker=&#39;o&#39;, linestyle=&#39;&#39;, color=color)
+        plt.plot(x_new, f(x_new), linestyle=&#39;-&#39;, color=color, label=label)
+
+    # Внешний вид
+    plt.xlim([x_min, x_max])
+    plt.ylim([y_min, y_max])
+    plt.xlabel(&#39;Размер матрицы&#39;)
+    plt.ylabel(&#39;Время выполнения, мс&#39;)
+    plt.legend(loc=&#39;best&#39;)
+    plt.grid(True)
+
+    # Сохранить в PNG и показать
+    file_name, file_extension = splitext(__file__)
+    plt.savefig(&#39;{:s}.png&#39;.format(basename(file_name)))
+    plt.show()
+
+
+if __name__ == &amp;quot;__main__&amp;quot;:
+    main()
+
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Графики производительности для разных сеток:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://winogradoff.github.io/img/cuda-roberts-cross-operator/plots.png&#34; alt=&#34;Сравнение производительности для разных сеток&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Полный код программы (CUDA C++):&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-cpp&#34;&gt;#include &amp;lt;iostream&amp;gt;
 #include &amp;lt;fstream&amp;gt;
@@ -210,8 +404,6 @@ int main() {
   return 0;
 }
 &lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Продолжение следует&amp;hellip;&lt;/p&gt;
 </description>
     </item>
     
