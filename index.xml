@@ -23,7 +23,7 @@
 &lt;p&gt;В компьютерном зрении перекрёстный оператор Робертса — один из ранних алгоритмов выделения границ, который вычисляет сумму квадратов разниц между диагонально смежными пикселами. Это может быть выполнено сверткой изображения с двумя ядрами:&lt;/p&gt;
 
 &lt;p style=&#34;text-align: center&#34;&gt;
-&lt;img src=&#34;https://winogradoff.github.io/img/cuda-roberts-cross-operator/wiki_1.png&#34; title=&#34;&#34; /&gt;
+&lt;img src=&#34;https://winogradoff.github.io/img/cuda-filtration/wiki_1.png&#34; title=&#34;&#34; /&gt;
 &lt;/p&gt;
 
 &lt;p&gt;Иными словами, каждый пиксель получаемого изображения вычисляется по правилу:&lt;/p&gt;
@@ -35,23 +35,23 @@ output_image(x, y) = sqrt(a^2 + b^2)
 
 &lt;p&gt;Что это всё значит разберём чуть позже, а пока давайте взглянем на работу фильтра:&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&#34;https://winogradoff.github.io/img/cuda-roberts-cross-operator/example_1_before.jpg&#34; alt=&#34;Оригинальное изображение&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://winogradoff.github.io/img/cuda-filtration/example_1_before.jpg&#34; alt=&#34;Оригинальное изображение&#34; /&gt;&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&#34;https://winogradoff.github.io/img/cuda-roberts-cross-operator/example_1_after.jpg&#34; alt=&#34;После фильтрации с помощью перекрёстного оператора Робертса&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://winogradoff.github.io/img/cuda-filtration/example_1_after.jpg&#34; alt=&#34;После фильтрации с помощью перекрёстного оператора Робертса&#34; /&gt;&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&#34;https://winogradoff.github.io/img/cuda-roberts-cross-operator/example_2_before.jpg&#34; alt=&#34;Оригинальное изображение&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://winogradoff.github.io/img/cuda-filtration/example_2_before.jpg&#34; alt=&#34;Оригинальное изображение&#34; /&gt;&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&#34;https://winogradoff.github.io/img/cuda-roberts-cross-operator/example_2_after.jpg&#34; alt=&#34;После фильтрации с помощью перекрёстного оператора Робертса&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://winogradoff.github.io/img/cuda-filtration/example_2_after.jpg&#34; alt=&#34;После фильтрации с помощью перекрёстного оператора Робертса&#34; /&gt;&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&#34;https://winogradoff.github.io/img/cuda-roberts-cross-operator/example_3_before.jpg&#34; alt=&#34;Оригинальное изображение&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://winogradoff.github.io/img/cuda-filtration/example_3_before.jpg&#34; alt=&#34;Оригинальное изображение&#34; /&gt;&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&#34;https://winogradoff.github.io/img/cuda-roberts-cross-operator/example_3_after.jpg&#34; alt=&#34;После фильтрации с помощью перекрёстного оператора Робертса&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://winogradoff.github.io/img/cuda-filtration/example_3_after.jpg&#34; alt=&#34;После фильтрации с помощью перекрёстного оператора Робертса&#34; /&gt;&lt;/p&gt;
 
 &lt;h1 id=&#34;описание-программы:6225e02feb7ed91db306400db8550870&#34;&gt;Описание программы&lt;/h1&gt;
 
 &lt;p&gt;Изображение является двоичным файлом со следующей структурой:&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&#34;https://winogradoff.github.io/img/cuda-roberts-cross-operator/image_format.png&#34; alt=&#34;Формат входного файла&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://winogradoff.github.io/img/cuda-filtration/image_format.png&#34; alt=&#34;Формат входного файла&#34; /&gt;&lt;/p&gt;
 
 &lt;p&gt;Входное и выходное изображения храняться в массивах:&lt;/p&gt;
 
@@ -108,8 +108,9 @@ if(gradient &amp;gt; 255) gradient = 255;
 dev_output[i * w + j] = pack(make_int4(gradient, gradient, gradient, 0));
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;Работа программы была проверена на различных сетках (количество блоков и потоков).
-Для построения графиков использовался Python + matplotlib.&lt;/p&gt;
+&lt;p&gt;Работа программы была проверена на различных вычислительных сетках (количество блоков и потоков).&lt;/p&gt;
+
+&lt;p&gt;Для построения графиков использовался Python + matplotlib.&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;import os
 from os.path import basename, splitext
@@ -237,7 +238,7 @@ if __name__ == &amp;quot;__main__&amp;quot;:
 
 &lt;p&gt;Графики производительности для разных сеток:&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&#34;https://winogradoff.github.io/img/cuda-roberts-cross-operator/plots.png&#34; alt=&#34;Сравнение производительности для разных сеток&#34; /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;https://winogradoff.github.io/img/cuda-filtration/plots.png&#34; alt=&#34;Сравнение производительности для разных сеток&#34; /&gt;&lt;/p&gt;
 
 &lt;p&gt;Полный код программы (CUDA C++):&lt;/p&gt;
 
@@ -959,11 +960,146 @@ int main() {
 }
 &lt;/code&gt;&lt;/pre&gt;
 
+&lt;h2 id=&#34;заключение:7578aed6481e2ff05fbcbd28da9edc77&#34;&gt;Заключение&lt;/h2&gt;
+
 &lt;p&gt;Подход к параллельным вычислениям предлагаемый Nvidia довольно прост: ускорить циклы с однотипными действиями.&lt;/p&gt;
 
 &lt;p&gt;Стоит отметить, что &lt;strong&gt;основная сложность&lt;/strong&gt; при написании программ на CUDA — выделение тех частей алгоритма, которые можно распараллелить.&lt;/p&gt;
 
 &lt;p&gt;Было бы очень интересно найти применение CUDA в реальном проекте.&lt;/p&gt;
+
+&lt;h3 id=&#34;графики:7578aed6481e2ff05fbcbd28da9edc77&#34;&gt;Графики&lt;/h3&gt;
+
+&lt;p&gt;Для анализа производительности программы с помощью Python и matplotlib были построены графики для разных вычислительных сеток.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;import os
+from os.path import basename, splitext
+from numpy import linspace, array
+import matplotlib
+import matplotlib.pyplot as plt
+from scipy.interpolate import interp1d
+from multiprocessing import Pool
+
+# Настройка шрифтов
+matplotlib.rc(&#39;font&#39;, family=&#39;Tahoma&#39;, size=16)
+matplotlib.rc(&#39;axes&#39;, titlesize=22)
+matplotlib.rc(&#39;axes&#39;, labelsize=18)
+matplotlib.rc(&#39;legend&#39;, fontsize=16)
+matplotlib.rc(&#39;xtick&#39;, labelsize=12)
+matplotlib.rc(&#39;ytick&#39;, labelsize=12)
+
+
+# Время выполнения для теста &amp;lt;size&amp;gt; для программы &amp;lt;program_name&amp;gt;
+def calculate_time(params):
+    program_name = params[&#39;program_name&#39;]
+    size = params[&#39;size&#39;]
+    testname = &#39;test{}.txt&#39;.format(size)
+    if not os.path.isfile(testname):
+        return None
+    output = os.popen(&#39;{} &amp;lt; {}&#39;.format(program_name, testname)).read()
+    output = float(output)
+    print(&#39;Программа {}, тест {}, время {} мс&#39;.format(program_name, testname, output))
+    return {&#39;size&#39;: size, &#39;time&#39;: output}
+
+
+# Расчёт времени выполнения для сеток от 1x1 до 2000x2000 для существующих тестов
+def run_test_for_program(program_name):
+
+    params = [{&#39;program_name&#39;: program_name, &#39;size&#39;: n} for n in range(3000 + 1)]
+    result = Pool(4).map(calculate_time, params)
+    result = [x for x in result if x is not None]
+    x = array([float(x[&#39;size&#39;]) for x in result])
+    y = array([x[&#39;time&#39;] for x in result])
+    return x, y
+
+
+# Данные измерений
+def get_functions():
+    return [
+        {
+            &#39;label&#39;: &#39;блоки: 8x8, потоки: 16x16&#39;,
+            &#39;color&#39;: &#39;red&#39;,
+            &#39;data&#39;: run_test_for_program(&#39;lab1_8x8_16x16.exe&#39;)
+        },
+        {
+            &#39;label&#39;: &#39;блоки: 16x16, потоки: 16x16&#39;,
+            &#39;color&#39;: &#39;green&#39;,
+            &#39;data&#39;: run_test_for_program(&#39;lab1_16x16_16x16.exe&#39;)
+        },
+        {
+            &#39;label&#39;: &#39;блоки: 32x32, потоки: 16x16&#39;,
+            &#39;color&#39;: &#39;blue&#39;,
+            &#39;data&#39;: run_test_for_program(&#39;lab1_32x32_16x16.exe&#39;)
+        },
+        {
+            &#39;label&#39;: &#39;блоки: 8x8, потоки: 32x32&#39;,
+            &#39;color&#39;: &#39;purple&#39;,
+            &#39;data&#39;: run_test_for_program(&#39;lab1_8x8_32x32.exe&#39;)
+        },
+        {
+            &#39;label&#39;: &#39;блоки: 16x16, потоки: 32x32&#39;,
+            &#39;color&#39;: &#39;orange&#39;,
+            &#39;data&#39;: run_test_for_program(&#39;lab1_16x16_32x32.exe&#39;)
+        },
+        {
+            &#39;label&#39;: &#39;блоки: 32x32, потоки: 32x32&#39;,
+            &#39;color&#39;: &#39;pink&#39;,
+            &#39;data&#39;: run_test_for_program(&#39;lab1_32x32_32x32.exe&#39;)
+        }
+    ]
+
+
+# Функция апроксимации
+def fit_quadratic_function(x, a, b, c):
+    return a * x ** 2 + b * x + c
+
+
+def main():
+    plt.figure(figsize=(22, 11), dpi=80)
+
+    x_min, x_max = None, None
+    y_min, y_max = None, None
+
+    for f in get_functions():
+        label = f[&#39;label&#39;]
+        color = f[&#39;color&#39;]
+        x, y = f[&#39;data&#39;]
+
+        if not all([x_min, x_max, y_min, y_max]):
+            x_min, x_max = x.min(), x.max()
+            y_min, y_max = y.min(), y.max()
+        else:
+            x_min, x_max = min(x_min, x.min()), max(x_max, x.max())
+            y_min, y_max = min(y_min, y.min()), max(y_max, y.max())
+
+        x_new = linspace(x.min(), x.max(), 100)
+        f = interp1d(x, y, kind=&#39;cubic&#39;)
+        plt.plot(x, y, marker=&#39;o&#39;, linestyle=&#39;&#39;, color=color)
+        plt.plot(x_new, f(x_new), linestyle=&#39;-&#39;, color=color, label=label)
+
+    # Внешний вид
+    plt.xlim([x_min, x_max])
+    plt.ylim([y_min, y_max])
+    plt.xlabel(&#39;Размер матрицы&#39;)
+    plt.ylabel(&#39;Время выполнения, мс&#39;)
+    plt.legend(loc=&#39;best&#39;)
+    plt.grid(True)
+
+    # Сохранить в PNG и показать
+    file_name, file_extension = splitext(__file__)
+    plt.savefig(&#39;{:s}.png&#39;.format(basename(file_name)))
+    plt.show()
+
+
+if __name__ == &amp;quot;__main__&amp;quot;:
+    main()
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Расчёты были проведены на сетках размеров от 100x100 до 3000x3000.&lt;/p&gt;
+
+&lt;p&gt;Графики производительности для разных сеток:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://winogradoff.github.io/img/cuda-inverse-matrix/plots.png&#34; alt=&#34;Сравнение производительности для разных вычислительных сеток&#34; /&gt;&lt;/p&gt;
 </description>
     </item>
     

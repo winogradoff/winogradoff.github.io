@@ -120,7 +120,7 @@
 <p>В компьютерном зрении перекрёстный оператор Робертса — один из ранних алгоритмов выделения границ, который вычисляет сумму квадратов разниц между диагонально смежными пикселами. Это может быть выполнено сверткой изображения с двумя ядрами:</p>
 
 <p style="text-align: center">
-<img src="/img/cuda-roberts-cross-operator/wiki_1.png" title="" />
+<img src="/img/cuda-filtration/wiki_1.png" title="" />
 </p>
 
 <p>Иными словами, каждый пиксель получаемого изображения вычисляется по правилу:</p>
@@ -132,23 +132,23 @@ output_image(x, y) = sqrt(a^2 + b^2)
 
 <p>Что это всё значит разберём чуть позже, а пока давайте взглянем на работу фильтра:</p>
 
-<p><img src="/img/cuda-roberts-cross-operator/example_1_before.jpg" alt="Оригинальное изображение" /></p>
+<p><img src="/img/cuda-filtration/example_1_before.jpg" alt="Оригинальное изображение" /></p>
 
-<p><img src="/img/cuda-roberts-cross-operator/example_1_after.jpg" alt="После фильтрации с помощью перекрёстного оператора Робертса" /></p>
+<p><img src="/img/cuda-filtration/example_1_after.jpg" alt="После фильтрации с помощью перекрёстного оператора Робертса" /></p>
 
-<p><img src="/img/cuda-roberts-cross-operator/example_2_before.jpg" alt="Оригинальное изображение" /></p>
+<p><img src="/img/cuda-filtration/example_2_before.jpg" alt="Оригинальное изображение" /></p>
 
-<p><img src="/img/cuda-roberts-cross-operator/example_2_after.jpg" alt="После фильтрации с помощью перекрёстного оператора Робертса" /></p>
+<p><img src="/img/cuda-filtration/example_2_after.jpg" alt="После фильтрации с помощью перекрёстного оператора Робертса" /></p>
 
-<p><img src="/img/cuda-roberts-cross-operator/example_3_before.jpg" alt="Оригинальное изображение" /></p>
+<p><img src="/img/cuda-filtration/example_3_before.jpg" alt="Оригинальное изображение" /></p>
 
-<p><img src="/img/cuda-roberts-cross-operator/example_3_after.jpg" alt="После фильтрации с помощью перекрёстного оператора Робертса" /></p>
+<p><img src="/img/cuda-filtration/example_3_after.jpg" alt="После фильтрации с помощью перекрёстного оператора Робертса" /></p>
 
 <h1 id="описание-программы:6225e02feb7ed91db306400db8550870">Описание программы</h1>
 
 <p>Изображение является двоичным файлом со следующей структурой:</p>
 
-<p><img src="/img/cuda-roberts-cross-operator/image_format.png" alt="Формат входного файла" /></p>
+<p><img src="/img/cuda-filtration/image_format.png" alt="Формат входного файла" /></p>
 
 <p>Входное и выходное изображения храняться в массивах:</p>
 
@@ -205,8 +205,9 @@ if(gradient &gt; 255) gradient = 255;
 dev_output[i * w + j] = pack(make_int4(gradient, gradient, gradient, 0));
 </code></pre>
 
-<p>Работа программы была проверена на различных сетках (количество блоков и потоков).
-Для построения графиков использовался Python + matplotlib.</p>
+<p>Работа программы была проверена на различных вычислительных сетках (количество блоков и потоков).</p>
+
+<p>Для построения графиков использовался Python + matplotlib.</p>
 
 <pre><code class="language-python">import os
 from os.path import basename, splitext
@@ -334,7 +335,7 @@ if __name__ == &quot;__main__&quot;:
 
 <p>Графики производительности для разных сеток:</p>
 
-<p><img src="/img/cuda-roberts-cross-operator/plots.png" alt="Сравнение производительности для разных сеток" /></p>
+<p><img src="/img/cuda-filtration/plots.png" alt="Сравнение производительности для разных сеток" /></p>
 
 <p>Полный код программы (CUDA C++):</p>
 

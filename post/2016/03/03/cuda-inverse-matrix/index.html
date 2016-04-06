@@ -659,11 +659,146 @@ int main() {
 }
 </code></pre>
 
+<h2 id="заключение:7578aed6481e2ff05fbcbd28da9edc77">Заключение</h2>
+
 <p>Подход к параллельным вычислениям предлагаемый Nvidia довольно прост: ускорить циклы с однотипными действиями.</p>
 
 <p>Стоит отметить, что <strong>основная сложность</strong> при написании программ на CUDA — выделение тех частей алгоритма, которые можно распараллелить.</p>
 
 <p>Было бы очень интересно найти применение CUDA в реальном проекте.</p>
+
+<h3 id="графики:7578aed6481e2ff05fbcbd28da9edc77">Графики</h3>
+
+<p>Для анализа производительности программы с помощью Python и matplotlib были построены графики для разных вычислительных сеток.</p>
+
+<pre><code class="language-python">import os
+from os.path import basename, splitext
+from numpy import linspace, array
+import matplotlib
+import matplotlib.pyplot as plt
+from scipy.interpolate import interp1d
+from multiprocessing import Pool
+
+# Настройка шрифтов
+matplotlib.rc('font', family='Tahoma', size=16)
+matplotlib.rc('axes', titlesize=22)
+matplotlib.rc('axes', labelsize=18)
+matplotlib.rc('legend', fontsize=16)
+matplotlib.rc('xtick', labelsize=12)
+matplotlib.rc('ytick', labelsize=12)
+
+
+# Время выполнения для теста &lt;size&gt; для программы &lt;program_name&gt;
+def calculate_time(params):
+    program_name = params['program_name']
+    size = params['size']
+    testname = 'test{}.txt'.format(size)
+    if not os.path.isfile(testname):
+        return None
+    output = os.popen('{} &lt; {}'.format(program_name, testname)).read()
+    output = float(output)
+    print('Программа {}, тест {}, время {} мс'.format(program_name, testname, output))
+    return {'size': size, 'time': output}
+
+
+# Расчёт времени выполнения для сеток от 1x1 до 2000x2000 для существующих тестов
+def run_test_for_program(program_name):
+
+    params = [{'program_name': program_name, 'size': n} for n in range(3000 + 1)]
+    result = Pool(4).map(calculate_time, params)
+    result = [x for x in result if x is not None]
+    x = array([float(x['size']) for x in result])
+    y = array([x['time'] for x in result])
+    return x, y
+
+
+# Данные измерений
+def get_functions():
+    return [
+        {
+            'label': 'блоки: 8x8, потоки: 16x16',
+            'color': 'red',
+            'data': run_test_for_program('lab1_8x8_16x16.exe')
+        },
+        {
+            'label': 'блоки: 16x16, потоки: 16x16',
+            'color': 'green',
+            'data': run_test_for_program('lab1_16x16_16x16.exe')
+        },
+        {
+            'label': 'блоки: 32x32, потоки: 16x16',
+            'color': 'blue',
+            'data': run_test_for_program('lab1_32x32_16x16.exe')
+        },
+        {
+            'label': 'блоки: 8x8, потоки: 32x32',
+            'color': 'purple',
+            'data': run_test_for_program('lab1_8x8_32x32.exe')
+        },
+        {
+            'label': 'блоки: 16x16, потоки: 32x32',
+            'color': 'orange',
+            'data': run_test_for_program('lab1_16x16_32x32.exe')
+        },
+        {
+            'label': 'блоки: 32x32, потоки: 32x32',
+            'color': 'pink',
+            'data': run_test_for_program('lab1_32x32_32x32.exe')
+        }
+    ]
+
+
+# Функция апроксимации
+def fit_quadratic_function(x, a, b, c):
+    return a * x ** 2 + b * x + c
+
+
+def main():
+    plt.figure(figsize=(22, 11), dpi=80)
+
+    x_min, x_max = None, None
+    y_min, y_max = None, None
+
+    for f in get_functions():
+        label = f['label']
+        color = f['color']
+        x, y = f['data']
+
+        if not all([x_min, x_max, y_min, y_max]):
+            x_min, x_max = x.min(), x.max()
+            y_min, y_max = y.min(), y.max()
+        else:
+            x_min, x_max = min(x_min, x.min()), max(x_max, x.max())
+            y_min, y_max = min(y_min, y.min()), max(y_max, y.max())
+
+        x_new = linspace(x.min(), x.max(), 100)
+        f = interp1d(x, y, kind='cubic')
+        plt.plot(x, y, marker='o', linestyle='', color=color)
+        plt.plot(x_new, f(x_new), linestyle='-', color=color, label=label)
+
+    # Внешний вид
+    plt.xlim([x_min, x_max])
+    plt.ylim([y_min, y_max])
+    plt.xlabel('Размер матрицы')
+    plt.ylabel('Время выполнения, мс')
+    plt.legend(loc='best')
+    plt.grid(True)
+
+    # Сохранить в PNG и показать
+    file_name, file_extension = splitext(__file__)
+    plt.savefig('{:s}.png'.format(basename(file_name)))
+    plt.show()
+
+
+if __name__ == &quot;__main__&quot;:
+    main()
+</code></pre>
+
+<p>Расчёты были проведены на сетках размеров от 100x100 до 3000x3000.</p>
+
+<p>Графики производительности для разных сеток:</p>
+
+<p><img src="/img/cuda-inverse-matrix/plots.png" alt="Сравнение производительности для разных вычислительных сеток" /></p>
 
 </div>
 
